@@ -8,8 +8,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="./assets/Al Rayed Store Organic Emblem.png">
 </head>
 <body>
+
+    <!-- شاشة التحميل الفخمة (Luxury Brand Preloader) -->
+    <div class="page-loader" id="pageLoader">
+        <div class="loader-content">
+            <div class="loader-logo-ring">
+                <div class="ring-outer"></div>
+                <div class="ring-inner"></div>
+                <img src="./assets/Al Rayed Store Organic Emblem.png" alt="Al Rayed Store">
+            </div>
+
+            <div class="loader-brand">
+                <h3>AL RAYED STORE</h3>
+                <span>نخبة المنتجات الطازجة والتمور الفاخرة 🌿</span>
+            </div>
+
+            <div class="loader-progress-track">
+                <div class="loader-progress-fill"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- 1. الهيدر العلوي -->
     <header class="header">
@@ -32,6 +53,32 @@
             <button class="login-btn">سجل الدخول</button>
         </div>
     </header>
+
+    <!-- شريط المميزات المتحرك (Marquee Ticker) -->
+    <div class="marquee-bar">
+        <div class="marquee-track">
+            <span>🌿 منتجات طازجة تُقطف يوميًا</span>
+            <span>•</span>
+            <span>🚚 توصيل سريع لحد باب بيتك</span>
+            <span>•</span>
+            <span>🌴 أجود أنواع التمور السعودية الفاخرة</span>
+            <span>•</span>
+            <span>🎁 توصيل مجاني للطلبات فوق 100 ر.س</span>
+            <span>•</span>
+            <span>💳 الدفع عند الاستلام بكل سهولة</span>
+            <span>•</span>
+            <span>🌿 منتجات طازجة تُقطف يوميًا</span>
+            <span>•</span>
+            <span>🚚 توصيل سريع لحد باب بيتك</span>
+            <span>•</span>
+            <span>🌴 أجود أنواع التمور السعودية الفاخرة</span>
+            <span>•</span>
+            <span>🎁 توصيل مجاني للطلبات فوق 100 ر.س</span>
+            <span>•</span>
+            <span>💳 الدفع عند الاستلام بكل سهولة</span>
+            <span>•</span>
+        </div>
+    </div>
 
     <!-- 2. قسم الواجهة الرئيسية (Hero Section) -->
     <section class="hero-section" id="home">
@@ -59,6 +106,38 @@
         </div>
     </section>
 
+    <!-- شريط مميزات الثقة (Trust Badges) -->
+    <section class="trust-bar">
+        <div class="trust-item">
+            <span class="trust-icon">🌿</span>
+            <div>
+                <h4>طازج 100% يوميًا</h4>
+                <p>من المزرعة لبيتك مباشرة</p>
+            </div>
+        </div>
+        <div class="trust-item">
+            <span class="trust-icon">🚚</span>
+            <div>
+                <h4>توصيل سريع ومبرد</h4>
+                <p>يصلك طلبك في أسرع وقت</p>
+            </div>
+        </div>
+        <div class="trust-item">
+            <span class="trust-icon">🌴</span>
+            <div>
+                <h4>تمور سعودية فاخرة</h4>
+                <p>نخبة أجود المحاصيل المختارة</p>
+            </div>
+        </div>
+        <div class="trust-item">
+            <span class="trust-icon">🛡️</span>
+            <div>
+                <h4>ضمان الجودة والاستبدال</h4>
+                <p>رضاك هو أولويتنا دائماً</p>
+            </div>
+        </div>
+    </section>
+
     <!-- 3. قسم المنتجات -->
     <section class="products-section" id="products">
         <div class="section-heading">
@@ -77,10 +156,55 @@
             <button class="category-btn" data-category="fruits">الفواكه</button>
             <button class="category-btn" data-category="dates">التمور</button>
             <button class="category-btn" data-category="food">مواد غذائية</button>
+            <button class="category-btn" data-category="snacks">سناكس ومشروبات</button>
         </div>
 
         <!-- شبكة المنتجات (تُملأ تلقائيًا عبر JS) -->
         <div class="products-grid" id="productsGrid"></div>
+    </section>
+
+    <!-- قسم عروض التوفير الحصرية (Dark Luxury Deal Section) -->
+    <section class="deals-section reveal" id="deals">
+        <div class="deals-container">
+            <div class="deals-text">
+                <span class="deal-badge">🔥 عرض لفترة محدودة</span>
+                <h2>بوكس التمور الملكية والعسل الطبيعي</h2>
+                <p>
+                    تشكيلة فاخرة تجمع بين تمر عجوة المدينة، التمر السكري الملكي، وعسل السدر الطبيعي الأصلي بخصم حصري لفترة محدودة.
+                </p>
+
+                <!-- العداد التنازلي الحي -->
+                <div class="countdown-box" id="countdownBox">
+                    <div class="time-unit">
+                        <strong id="hoursVal">14</strong>
+                        <span>ساعة</span>
+                    </div>
+                    <div class="time-unit">
+                        <strong id="minsVal">45</strong>
+                        <span>دقيقة</span>
+                    </div>
+                    <div class="time-unit">
+                        <strong id="secsVal">30</strong>
+                        <span>ثانية</span>
+                    </div>
+                </div>
+
+                <div class="deal-price-row">
+                    <div class="deal-prices">
+                        <span class="deal-new-price">119.00 ر.س</span>
+                        <span class="deal-old-price">165.00 ر.س</span>
+                    </div>
+                    <button class="deal-order-btn" id="orderDealBtn">
+                        🛒 اطلب البوكس الآن
+                    </button>
+                </div>
+            </div>
+
+            <div class="deals-image">
+                <img src="assets/Gemini_Generated_Image_n1teven1teven1te.png" alt="بوكس التمور الملكية والعسل الطبيعي">
+                <div class="discount-sticker">وفر 28%</div>
+            </div>
+        </div>
     </section>
 
     <!-- 4. سلة المشتريات الجانبية (Cart Drawer) -->
@@ -92,20 +216,68 @@
             <button id="closeCart" class="close-cart" aria-label="إغلاق السلة">✕</button>
         </div>
 
+        <!-- مكان عرض المنتجات داخل السلة -->
         <div class="cart-items" id="cartItems"></div>
 
+        <!-- فوتر السلة -->
         <div class="cart-footer">
+            <div class="free-shipping-box">
+                <p id="shippingText">أضف منتجات بقيمة <strong>100.00 ر.س</strong> للحصول على توصيل مجاني 🚚</p>
+                <div class="shipping-bar">
+                    <div class="shipping-progress" id="shippingProgress"></div>
+                </div>
+            </div>
+<!-- خانة كود الخصم (Promo Code) -->
+            <div class="promo-box">
+                <input type="text" id="promoInput" placeholder="عندك كود خصم؟ جرب RAYED10">
+                <button type="button" id="applyPromoBtn">تطبيق</button>
+            </div>
+            <p class="promo-msg" id="promoMsg" style="display: none;"></p>
+            
+            
             <div class="total-row">
                 <span>الإجمالي:</span>
                 <strong id="cartTotal">0.00 ر.س</strong>
             </div>
-            <button class="checkout-btn" id="checkoutBtn">إتمام الطلب</button>
-            <button class="continue-btn" id="continueShopping">مواصلة التسوق</button>
+
+            <div class="checkout-fields" id="checkoutFields" style="display: none;">
+                <input type="text" id="customerName" placeholder="الاسم بالكامل" required>
+                <input type="tel" id="customerPhone" placeholder="رقم الجوال (05xxxxxxxx)" required>
+                <input type="text" id="customerAddress" placeholder="المدينة / الحي / العنوان" required>
+
+                <!-- اختيار طريقة الدفع -->
+                <div class="payment-methods">
+                    <label class="payment-label">طريقة الدفع المفضلة:</label>
+                    <div class="payment-options">
+                        <label class="pay-option active">
+                            <input type="radio" name="paymentMethod" value="الدفع عند الاستلام 💵" checked>
+                            <span>💵 عند الاستلام</span>
+                        </label>
+                        <label class="pay-option">
+                            <input type="radio" name="paymentMethod" value="تحويل بنكي (مدى) 💳">
+                            <span>💳 تحويل بنكي</span>
+                        </label>
+                        <label class="pay-option">
+                            <input type="radio" name="paymentMethod" value="محفظة STC Pay 📱">
+                            <span>📱 STC Pay</span>
+                        </label>
+                    </div>
+
+                    <!-- تفاصيل التحويل -->
+                    <div class="transfer-info-box" id="transferInfoBox" style="display: none;">
+                        <p id="transferDetailsText"></p>
+                    </div>
+                </div>
+            </div>
+
+            <button class="checkout-btn" id="checkoutBtn">
+                إتمام الطلب
+            </button>
+            <button class="continue-btn" id="continueShopping">
+                مواصلة التسوق
+            </button>
         </div>
     </aside>
-
-    <!-- إشعار الإضافة للسلة -->
-    <div class="toast" id="toast"></div>
 
     <!-- 5. الفوتر -->
     <footer class="main-footer" id="footer">
@@ -124,34 +296,40 @@
             </div>
 
             <div class="footer-column">
-                <h3>روابط سريعة</h3>
+                <h3>خدمة العملاء والسياسات</h3>
                 <ul>
-                    <li><a href="#home">الصفحة الرئيسية</a></li>
-                    <li><a href="#products">جميع المنتجات</a></li>
-                    <li><a href="#products">العروض والخصومات</a></li>
-                    <li><a href="#footer">من نحن</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-column">
-                <h3>خدمة العملاء</h3>
-                <ul>
-                    <li><a href="#">سياسة الخصوصية</a></li>
-                    <li><a href="#">الشروط والأحكام</a></li>
-                    <li><a href="#">سياسة الاسترجاع</a></li>
-                    <li><a href="#">خدمات التوصيل</a></li>
+                    <li><a href="#" data-policy="privacy">سياسة الخصوصية</a></li>
+                    <li><a href="#" data-policy="terms">الشروط والأحكام</a></li>
+                    <li><a href="#" data-policy="refund">سياسة الاستبدال والاسترجاع</a></li>
+                    <li><a href="#deals">عروض التوفير</a></li>
                 </ul>
             </div>
 
             <div class="footer-column footer-contact">
                 <h3>تواصل معنا</h3>
-                <p><span>📞</span> <a href="tel:+966500000000" dir="ltr">+966 50 000 0000</a></p>
+                <p><span>📞</span> <a href="tel:+966597098044" dir="ltr">+966 59 709 8044</a></p>
                 <p><span>✉️</span> <a href="mailto:info@alrayedstore.com">info@alrayedstore.com</a></p>
-                <p><span>📍</span> المملكة العربية السعودية</p>
+                <p><span>📍</span> المملكة العربية السعودية - الرياض</p>
                 <p><span>🕒</span> يوميًا من 8 صباحًا حتى 11 مساءً</p>
-                <a class="whatsapp-btn" href="https://wa.me/966500000000" target="_blank" rel="noopener noreferrer">
-                    تواصل معنا عبر واتساب
+                <a class="whatsapp-btn" href="https://wa.me/966597098044" target="_blank">
+                    <span>💬</span> ابدأ الدردشة على واتساب
                 </a>
+            </div>
+        </div>
+
+        <!-- شريط التوثيق الرسمي السعودي (السجل التجاري + المركز السعودي للأعمال) -->
+        <div class="official-trust-strip">
+            <div class="cr-info">
+                <span>🏛️ <strong>السجل التجاري:</strong> 1010XXXXXX (قيد التحديث)</span>
+                <span class="sep">|</span>
+                <span>🧾 <strong>الرقم الضريبي:</strong> 300XXXXXXXXXXX3</span>
+            </div>
+            <div class="saudi-business-badge" title="موثق في المركز السعودي للأعمال">
+                <span class="qr-placeholder">QR</span>
+                <div>
+                    <strong>موثق لدى منصة الأعمال</strong>
+                    <small>business.sa</small>
+                </div>
             </div>
         </div>
 
@@ -160,6 +338,123 @@
             <p>صُنع بكل ❤️ لتجربة تسوق أفضل</p>
         </div>
     </footer>
+
+    <!-- نافذة عرض السياسات القانونية (Policy Modal) -->
+    <div class="qv-overlay" id="policyOverlay">
+        <div class="auth-modal policy-modal">
+            <button class="close-auth" id="closePolicy" aria-label="إغلاق">✕</button>
+            <div class="policy-header">
+                <span class="qv-category">متجر الرايد • لوائح المتجر</span>
+                <h2 id="policyTitle">عنوان السياسة</h2>
+            </div>
+            <div class="policy-body" id="policyBody"></div>
+        </div>
+    </div>
+
+    <!-- نافذة تسجيل الدخول وإنشاء حساب (Login Modal) -->
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-modal">
+            <button class="close-auth" id="closeAuth" aria-label="إغلاق">✕</button>
+            
+            <div class="auth-header">
+                <img src="./assets/Al Rayed Store Organic Emblem.png" alt="Al Rayed Store" class="auth-logo">
+                <h2 id="authTitle">مرحبًا بعودتك 🌿</h2>
+                <p id="authSubtitle">سجل دخولك لمتابعة طلباتك وعروض متجر الرايد</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab active" data-tab="login">تسجيل الدخول</button>
+                <button type="button" class="auth-tab" data-tab="register">حساب جديد</button>
+            </div>
+
+            <form id="loginForm" class="auth-form active">
+                <div class="input-group">
+                    <label>رقم الجوال أو البريد الإلكتروني</label>
+                    <input type="text" placeholder="05xxxxxxxx" required>
+                </div>
+                <div class="input-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="auth-submit-btn">دخول</button>
+            </form>
+
+            <form id="registerForm" class="auth-form">
+                <div class="input-group">
+                    <label>الاسم الكامل</label>
+                    <input type="text" placeholder="مثال: مازن رائد" required>
+                </div>
+                <div class="input-group">
+                    <label>رقم الجوال</label>
+                    <input type="tel" placeholder="05xxxxxxxx" required>
+                </div>
+                <div class="input-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" placeholder="اختر كلمة مرور قوية" required>
+                </div>
+                <button type="submit" class="auth-submit-btn">إنشاء حساب</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- نافذة العرض السريع للمنتج (Quick View Modal) -->
+    <div class="qv-overlay" id="qvOverlay">
+        <div class="qv-modal">
+            <button class="close-qv" id="closeQv" aria-label="إغلاق">✕</button>
+            
+            <div class="qv-content">
+                <div class="qv-image-box">
+                    <img id="qvImage" src="" alt="صورة المنتج">
+                </div>
+                
+                <div class="qv-details">
+                    <span class="qv-category" id="qvCategory">القسم</span>
+                    <h2 id="qvName">اسم المنتج</h2>
+                    <div class="qv-price" id="qvPrice">0.00 ر.س</div>
+                    
+                    <p class="qv-desc" id="qvDesc">
+                        منتج طازج ومختار بعناية فائقة من أجود المصادر لضمان أفضل جودة وطعم لبيتك وعائلتك.
+                    </p>
+
+                    <div class="qv-actions">
+                        <div class="qv-qty">
+                            <button type="button" id="qvIncrease">+</button>
+                            <span id="qvQtyValue">1</span>
+                            <button type="button" id="qvDecrease">-</button>
+                        </div>
+                        
+                        <button type="button" class="qv-add-btn" id="qvAddBtn">
+                            🛒 أضف للسلة
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- شريط تتبع الطلب الحي (Live Order Tracker) -->
+    <div class="order-tracker-card" id="orderTrackerCard" style="display: none;">
+        <div class="tracker-header">
+            <span class="tracker-status-badge" id="trackerBadge">⏳ جاري التجهيز</span>
+            <button class="close-tracker" id="closeTracker" title="إخفاء">✕</button>
+        </div>
+
+        <h4 id="trackerTitle">جاري تجهيز طلبك بعناية 📦</h4>
+        <p id="trackerDesc">الوقت المتبقي لجهوزية الطلب:</p>
+
+        <div class="tracker-timer" id="trackerTimer">05:00</div>
+
+        <div class="tracker-steps">
+            <div class="t-step done">✓ استلام</div>
+            <div class="t-line active" id="tLine1"></div>
+            <div class="t-step active" id="tStep2">📦 تجهيز</div>
+            <div class="t-line" id="tLine2"></div>
+            <div class="t-step" id="tStep3">🛵 مع المندوب</div>
+        </div>
+    </div>
+    <!-- إشعار التنبيهات (Toast) -->
+    <div class="toast" id="toast"></div>
+
+<script type="module" src="firebase-db.js"></script>
 
     <script src="script.js"></script>
 </body>
