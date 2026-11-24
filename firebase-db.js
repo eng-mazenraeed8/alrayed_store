@@ -58,6 +58,19 @@ window.AlRayedDB = {
         }
     },
 
+    // الاشتراك اللحظي في مجموعة المنتجات (يعيد دالة لإلغاء الاشتراك)
+    subscribeToProducts(callback) {
+        return onSnapshot(
+            collection(db, "products"),
+            (snapshot) => {
+                const items = [];
+                snapshot.forEach(d => items.push({ firebaseId: d.id, ...d.data() }));
+                callback(items);
+            },
+            (err) => console.error("Firebase Products Snapshot Error:", err)
+        );
+    },
+
     // 3. دوال لوحة التحكم (Admin)
     db,
     collection,
@@ -71,3 +84,6 @@ window.AlRayedDB = {
     serverTimestamp,
     onSnapshot
 };
+
+// script.js is a classic script that runs before this module, so it waits for this event.
+window.dispatchEvent(new Event("alrayed-db-ready"));

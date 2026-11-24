@@ -244,6 +244,8 @@ const checkoutBtn = document.getElementById("checkoutBtn");
 // ======================================
 // STATE
 // ======================================
+const CLOUD_PRODUCT_ID_OFFSET = 1000000;
+
 let selectedCategory = "all";
 let searchTerm = "";
 let cart = [];
@@ -253,7 +255,7 @@ try {
     const savedCart = JSON.parse(localStorage.getItem("alRayedCart") || "[]");
     if (Array.isArray(savedCart)) {
         cart = savedCart.filter(item =>
-            (products.some(p => p.id === item.id) || item.id === 99) &&
+            (products.some(p => p.id === item.id) || item.id === 99 || item.id >= CLOUD_PRODUCT_ID_OFFSET) &&
             Number.isInteger(item.quantity) &&
             item.quantity > 0
         );
@@ -517,20 +519,18 @@ function resetCheckoutState() {
     if (checkoutBtn) {
         checkoutBtn.textContent = "إتمام الطلب";
         checkoutBtn.style.backgroundColor = "";
-        if (window.AlRayedDB) {
-    window.AlRayedDB.saveOrderToCloud({
-        customerName: name,
-        customerPhone: phone,
-        customerAddress: address,
-        paymentMethod: selectedPayment,
-        items: cart.map(item => {
-            const p = products.find(prod => prod.id === item.id);
-            return { name: p ? p.name : "منتج", qty: item.quantity, price: p ? p.price : 0 };
-        }),
-        total: totalAmount
-    });
-        }
     }
+}
+
+const ORDER_SAVE_TIMEOUT_MS = 5000;
+
+async function saveOrderToFirestore(orderData) {
+    if (!window.AlRayedDB) {
+        console.error("Firestore is not ready; order was not saved to the cloud.");
+        return null;
+    }
+    const timeout = new Promise(resolve => setTimeout(() => resolve(null), ORDER_SAVE_TIMEOUT_MS));
+    return Promise.race([window.AlRayedDB.saveOrderToCloud(orderData), timeout]);
 }
 
 function openCart() {
@@ -666,8 +666,9 @@ document.querySelectorAll(".pay-option").forEach(option => {
 });
 
 if (checkoutBtn) {
-    checkoutBtn.addEventListener("click", (e) => {
+    checkoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
+        if (checkoutBtn.disabled) return;
 
         if (cart.length === 0) {
             showToast("السلة فارغة، أضف منتجات أولًا");
@@ -718,6 +719,27 @@ if (checkoutBtn) {
         orderDetails += `━━━━━━━━━━━━━━\n`;
         orderDetails += `🚚 *التوصيل:* ${shippingStatus}\n`;
         orderDetails += `💰 *الإجمالي:* ${totalAmount.toFixed(2)} ر.س`;
+
+        const orderItems = cart.reduce((list, item) => {
+            const p = products.find(prod => prod.id === item.id);
+            if (p) list.push({ name: p.name, qty: item.quantity, price: p.price });
+            return list;
+        }, []);
+
+        checkoutBtn.disabled = true;
+        showToast("جاري حفظ طلبك... ⏳");
+
+        const orderId = await saveOrderToFirestore({
+            customerName: name,
+            customerPhone: phone,
+            customerAddress: address,
+            paymentMethod: selectedPayment,
+            items: orderItems,
+            total: Number(totalAmount.toFixed(2))
+        });
+
+        checkoutBtn.disabled = false;
+        if (orderId) orderDetails += `\n🔖 *رقم الطلب:* ${orderId}`;
 
         startOrderTracking();
         closeCartDrawer();
@@ -1146,26 +1168,49 @@ updateCart = function() {
     baseUpdateCart();
     updateCartWithDiscount();
 };
-// تحميل المنتجات المضافة من لوحة التحكم (Firebase)
-window.addEventListener("load", async () => {
-    setTimeout(async () => {
-        if (window.AlRayedDB) {
-            const extraProducts = await window.AlRayedDB.loadCloudProducts();
-            if (extraProducts.length > 0) {
-                extraProducts.forEach(item => {
-                    if (!products.some(p => p.name === item.name)) {
-                        products.unshift({
-                            id: Number(item.id) || Date.now(),
-                            name: item.name,
-                            category: item.category || "dates",
-                            categoryName: item.categoryName || "منتجات مميزة",
-                            price: Number(item.price),
-                            image: item.image
-                        });
-                    }
-                });
-                displayProducts();
-            }
-        }
-    }, 800);
-});
+// مزامنة لحظية للمنتجات المضافة من لوحة التحكم (Firebase Firestore)
+function cloudProductId(firebaseId) {
+    let hash = 0;
+    for (const ch of firebaseId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    return CLOUD_PRODUCT_ID_OFFSET + (hash % 1000000000);
+}
+
+function applyCloudProducts(items) {
+    for (let i = products.length - 1; i >= 0; i--) {
+        if (products[i].firebaseId) products.splice(i, 1);
+    }
+
+    const cloudProducts = items
+        .filter(item => item.name && Number.isFinite(Number(item.price)))
+        .filter(item => !products.some(p => p.name === item.name))
+        .map(item => ({
+            id: cloudProductId(item.firebaseId),
+            firebaseId: item.firebaseId,
+            name: String(item.name),
+            category: item.category || "dates",
+            categoryName: item.categoryName || "منتجات مميزة",
+            price: Number(item.price),
+            image: item.image || "assets/Al%20Rayed%20Store%20Organic%20Emblem.png"
+        }));
+
+    products.unshift(...cloudProducts);
+
+    const cartBefore = cart.length;
+    cart = cart.filter(item => item.id === 99 || products.some(p => p.id === item.id));
+    if (cart.length !== cartBefore) showToast("تم تحديث السلة بعد تغيير المنتجات");
+
+    displayProducts();
+    updateCart();
+}
+
+function startCloudProductsSync() {
+    if (window.AlRayedDB && typeof window.AlRayedDB.subscribeToProducts === "function") {
+        window.AlRayedDB.subscribeToProducts(applyCloudProducts);
+    }
+}
+
+if (window.AlRayedDB) {
+    startCloudProductsSync();
+} else {
+    window.addEventListener("alrayed-db-ready", startCloudProductsSync, { once: true });
+}
