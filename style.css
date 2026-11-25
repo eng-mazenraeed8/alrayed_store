@@ -2848,3 +2848,157 @@ body.dark-mode .t-step.active {
     padding-right: 20px;
     margin-bottom: 10px;
 }
+/* =====================================
+   19. VISIBLE AMBIENT BACKGROUND LAYER
+   (هالات زمردية وذهبية + أوراق نباتية طافية خلف المحتوى)
+===================================== */
+
+html {
+    background-color: #FAF9F6;
+}
+
+html:has(body.dark-mode) {
+    background-color: #0B1913;
+}
+
+body,
+body.dark-mode {
+    background-color: transparent !important;
+    background-image: none !important;
+    animation: none;
+}
+
+.hero-section,
+.trust-bar,
+.products-section,
+.deals-section,
+main {
+    background-color: transparent !important;
+}
+
+.ambient-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+    background-color: var(--bg-page);
+    background-image: radial-gradient(rgba(27, 67, 50, 0.09) 1.3px, transparent 1.3px);
+    background-size: 28px 28px;
+    animation: bgPatternMove 25s linear infinite;
+}
+
+.ambient-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.55;
+    will-change: transform;
+}
+
+.orb-emerald-1 {
+    width: 46vmax;
+    height: 46vmax;
+    top: -14vmax;
+    right: -12vmax;
+    background: radial-gradient(circle, rgba(82, 183, 136, 0.55) 0%, rgba(82, 183, 136, 0) 70%);
+    animation: orbFloatA 26s ease-in-out infinite alternate;
+}
+
+.orb-gold-1 {
+    width: 38vmax;
+    height: 38vmax;
+    bottom: -12vmax;
+    left: -10vmax;
+    background: radial-gradient(circle, rgba(245, 190, 80, 0.5) 0%, rgba(245, 190, 80, 0) 70%);
+    animation: orbFloatB 30s ease-in-out infinite alternate;
+}
+
+.orb-emerald-2 {
+    width: 30vmax;
+    height: 30vmax;
+    top: 45%;
+    left: 30%;
+    background: radial-gradient(circle, rgba(116, 198, 157, 0.4) 0%, rgba(116, 198, 157, 0) 70%);
+    animation: orbFloatC 34s ease-in-out infinite alternate;
+}
+
+.orb-gold-2 {
+    width: 24vmax;
+    height: 24vmax;
+    top: 8%;
+    left: 12%;
+    background: radial-gradient(circle, rgba(253, 216, 120, 0.42) 0%, rgba(253, 216, 120, 0) 70%);
+    animation: orbFloatA 38s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes orbFloatA {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-8vw, 10vh) scale(1.12); }
+}
+
+@keyframes orbFloatB {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(10vw, -8vh) scale(1.1); }
+}
+
+@keyframes orbFloatC {
+    0% { transform: translate(0, 0) scale(0.95); }
+    100% { transform: translate(-6vw, -12vh) scale(1.15); }
+}
+
+.ambient-leaf {
+    position: absolute;
+    fill: #2D6A4F;
+    opacity: 0.12;
+    will-change: transform;
+}
+
+.leaf-1 { width: 90px;  top: 14%; right: 8%;  animation: leafDrift 28s ease-in-out infinite alternate; }
+.leaf-2 { width: 64px;  top: 62%; right: 18%; fill: #B7791F; opacity: 0.14; animation: leafDrift 34s ease-in-out infinite alternate-reverse; }
+.leaf-3 { width: 110px; top: 40%; left: 4%;   animation: leafDrift 40s ease-in-out infinite alternate; animation-delay: -12s; }
+.leaf-4 { width: 56px;  top: 82%; left: 38%;  animation: leafDrift 31s ease-in-out infinite alternate; animation-delay: -6s; }
+.leaf-5 { width: 72px;  top: 6%;  left: 42%;  fill: #B7791F; opacity: 0.12; animation: leafDrift 37s ease-in-out infinite alternate-reverse; animation-delay: -18s; }
+
+@keyframes leafDrift {
+    0%   { transform: translate(0, 0) rotate(-12deg); }
+    50%  { transform: translate(28px, -36px) rotate(10deg); }
+    100% { transform: translate(-22px, 30px) rotate(-4deg); }
+}
+
+body.dark-mode .ambient-bg {
+    background-image: radial-gradient(rgba(110, 231, 183, 0.07) 1.3px, transparent 1.3px);
+}
+
+body.dark-mode .ambient-orb {
+    opacity: 0.32;
+}
+
+body.dark-mode .orb-gold-1,
+body.dark-mode .orb-gold-2 {
+    opacity: 0.22;
+}
+
+body.dark-mode .ambient-leaf {
+    fill: #74C69D;
+    opacity: 0.09;
+}
+
+body.dark-mode .leaf-2,
+body.dark-mode .leaf-5 {
+    fill: #F6C760;
+    opacity: 0.08;
+}
+
+@media (max-width: 768px) {
+    .ambient-orb { filter: blur(55px); }
+    .leaf-3, .leaf-4 { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ambient-bg,
+    .ambient-orb,
+    .ambient-leaf {
+        animation: none !important;
+    }
+}
