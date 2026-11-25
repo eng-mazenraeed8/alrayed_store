@@ -28,6 +28,15 @@
             justify-content: space-between; align-items: center;
         }
         header a { color: #FBBF24; text-decoration: none; font-weight: 700; }
+        .header-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .btn-logout {
+            background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,0.6);
+            padding: 6px 14px; border-radius: 8px; font-weight: 700; cursor: pointer;
+        }
+        .btn-logout:hover { background: rgba(255,255,255,0.12); }
+        .login-box button:disabled { opacity: .6; cursor: wait; }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+        .btn-blue { background: #DBEAFE; color: #1E40AF; }
         .container { max-width: 1200px; margin: 30px auto; padding: 0 5%; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 30px; }
         .stat-card { background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
@@ -65,14 +74,24 @@
         <div class="login-box">
             <h2>لوحة تحكم الإدارة 🔐</h2>
             <p style="font-size:13px;color:#6B7280;">متجر الرايد - Al Rayed Store</p>
-            <input type="password" id="adminPassInput" placeholder="أدخل كلمة مرور الإدارة (admin123)">
-            <button id="adminLoginBtn">دخول للوحة التحكم</button>
+            <form id="adminLoginForm">
+                <label for="adminEmailInput" class="sr-only">البريد الإلكتروني</label>
+                <input type="email" id="adminEmailInput" placeholder="البريد الإلكتروني للمسؤول" autocomplete="username" required>
+                <label for="adminPassInput" class="sr-only">كلمة المرور</label>
+                <input type="password" id="adminPassInput" placeholder="كلمة المرور" autocomplete="current-password" required>
+                <button type="submit" id="adminLoginBtn">دخول للوحة التحكم</button>
+            </form>
+            <p id="adminLoginError" role="alert" style="color:#B91C1C;font-size:13px;margin-top:10px;min-height:18px;"></p>
         </div>
     </div>
 
     <header>
         <h2>🌿 لوحة تحكم متجر الرايد</h2>
-        <a href="index.html">← العودة للمتجر</a>
+        <div class="header-actions">
+            <span id="adminUserEmail" style="font-size:13px;opacity:.85;"></span>
+            <a href="index.html">← العودة للمتجر</a>
+            <button type="button" id="adminLogoutBtn" class="btn-logout">تسجيل الخروج</button>
+        </div>
     </header>
 
     <div class="container">
@@ -124,77 +143,179 @@
     <script type="module" src="firebase-db.js"></script>
     <script type="module">
         const loginScreen = document.getElementById("adminLoginScreen");
-        if (sessionStorage.getItem("alRayedAdminAuth") === "true") {
-            loginScreen.style.display = "none";
+        const loginForm = document.getElementById("adminLoginForm");
+        const loginBtn = document.getElementById("adminLoginBtn");
+        const loginError = document.getElementById("adminLoginError");
+        const logoutBtn = document.getElementById("adminLogoutBtn");
+        const userEmailEl = document.getElementById("adminUserEmail");
+        const ordersList = document.getElementById("ordersList");
+        const cloudProductsList = document.getElementById("cloudProductsList");
+
+        const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        })[c]);
+
+        const AUTH_ERRORS = {
+            "auth/invalid-credential": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+            "auth/wrong-password": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+            "auth/user-not-found": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+            "auth/invalid-email": "صيغة البريد الإلكتروني غير صحيحة.",
+            "auth/too-many-requests": "محاولات كثيرة، حاول مرة أخرى لاحقاً.",
+            "auth/network-request-failed": "تعذر الاتصال بالشبكة.",
+            "auth/operation-not-allowed": "تسجيل الدخول بالبريد غير مفعّل في Firebase Authentication."
+        };
+
+        const whenDbReady = () => new Promise((resolve) => {
+            if (window.AlRayedDB) return resolve(window.AlRayedDB);
+            window.addEventListener("alrayed-db-ready", () => resolve(window.AlRayedDB), { once: true });
+        });
+
+        const DB = await whenDbReady();
+        const { db, collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy, onSnapshot } = DB;
+
+        let unsubscribers = [];
+        const isAuthed = () => Boolean(DB.currentUser);
+
+        function stopListeners() {
+            unsubscribers.forEach((unsub) => unsub());
+            unsubscribers = [];
         }
-        document.getElementById("adminLoginBtn").addEventListener("click", () => {
-            const pass = document.getElementById("adminPassInput").value;
-            if (pass === "admin123") {
-                sessionStorage.setItem("alRayedAdminAuth", "true");
+
+        function resetDashboard() {
+            ordersList.innerHTML = '<p style="color:#6B7280;">جاري تحميل الطلبات...</p>';
+            cloudProductsList.innerHTML = "";
+            document.getElementById("totalOrdersCount").textContent = "0";
+            document.getElementById("totalSalesAmount").textContent = "0.00";
+            document.getElementById("cloudProductsCount").textContent = "0";
+        }
+
+        function renderOrders(snapshot) {
+            let totalSales = 0;
+            document.getElementById("totalOrdersCount").textContent = snapshot.size;
+
+            if (snapshot.empty) {
+                ordersList.innerHTML = "<p>لا توجد طلبات مسجلة حتى الآن.</p>";
+                document.getElementById("totalSalesAmount").textContent = "0.00";
+                return;
+            }
+
+            ordersList.innerHTML = "";
+            snapshot.forEach((docSnap) => {
+                const order = docSnap.data();
+                totalSales += Number(order.total || 0);
+                const isDone = order.status && order.status.includes("المندوب");
+                const itemsHtml = (order.items || [])
+                    .map((i) => `• ${escapeHtml(i.name)} (×${escapeHtml(i.qty)})`)
+                    .join("<br>");
+
+                const card = document.createElement("div");
+                card.className = "order-card";
+                card.innerHTML = `
+                    <div class="order-top">
+                        <strong>👤 ${escapeHtml(order.customerName)} (${escapeHtml(order.customerPhone)})</strong>
+                        <span class="badge ${isDone ? "done" : ""}">${escapeHtml(order.status || "جديد")}</span>
+                    </div>
+                    <div style="font-size:13px;color:#374151;">📍 ${escapeHtml(order.customerAddress)} | 💳 ${escapeHtml(order.paymentMethod)}</div>
+                    <div class="order-items">${itemsHtml}</div>
+                    <div style="font-weight:800;color:#1B4332;">💰 الإجمالي: ${Number(order.total || 0).toFixed(2)} ر.س</div>
+                    <div class="order-actions">
+                        <button class="btn-sm btn-green" data-dispatch="${docSnap.id}">🛵 تم التسليم للمندوب</button>
+                        <button class="btn-sm btn-red" data-del-order="${docSnap.id}">حذف</button>
+                    </div>
+                `;
+                ordersList.appendChild(card);
+            });
+
+            document.getElementById("totalSalesAmount").textContent = totalSales.toFixed(2);
+        }
+
+        function renderProducts(snap) {
+            document.getElementById("cloudProductsCount").textContent = snap.size;
+            let html = snap.empty ? "" : "<h4 style='margin-bottom:8px;'>المنتجات المضافة حالياً:</h4>";
+            snap.forEach((d) => {
+                const p = d.data();
+                html += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;border-bottom:1px solid #eee;font-size:13px;">
+                        <span>${escapeHtml(p.name)} - <strong>${escapeHtml(p.price)} ر.س</strong></span>
+                        <span style="display:flex;gap:6px;">
+                            <button class="btn-sm btn-blue" data-edit-prod="${d.id}" data-price="${escapeHtml(p.price)}">تعديل السعر</button>
+                            <button class="btn-sm btn-red" data-del-prod="${d.id}">حذف</button>
+                        </span>
+                    </div>
+                `;
+            });
+            cloudProductsList.innerHTML = html;
+        }
+
+        const logListenerError = (label) => (err) => console.error(`Firestore ${label} listener error:`, err);
+
+        function startListeners() {
+            stopListeners();
+            const qOrders = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+            unsubscribers.push(onSnapshot(qOrders, renderOrders, logListenerError("orders")));
+            unsubscribers.push(onSnapshot(collection(db, "products"), renderProducts, logListenerError("products")));
+        }
+
+        DB.onAuthStateChanged((user) => {
+            if (user) {
                 loginScreen.style.display = "none";
+                userEmailEl.textContent = user.email || "";
+                startListeners();
             } else {
-                alert("كلمة المرور غير صحيحة!");
+                stopListeners();
+                resetDashboard();
+                userEmailEl.textContent = "";
+                loginScreen.style.display = "flex";
             }
         });
 
-        setTimeout(() => {
-            if (!window.AlRayedDB) return;
-            const { db, collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy, onSnapshot } = window.AlRayedDB;
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            loginError.textContent = "";
+            loginBtn.disabled = true;
+            try {
+                await DB.loginAdmin(
+                    document.getElementById("adminEmailInput").value.trim(),
+                    document.getElementById("adminPassInput").value
+                );
+                loginForm.reset();
+            } catch (err) {
+                loginError.textContent = AUTH_ERRORS[err.code] || "تعذر تسجيل الدخول، حاول مرة أخرى.";
+            } finally {
+                loginBtn.disabled = false;
+            }
+        });
 
-            const qOrders = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-            onSnapshot(qOrders, (snapshot) => {
-                const ordersList = document.getElementById("ordersList");
-                let totalSales = 0;
-                document.getElementById("totalOrdersCount").textContent = snapshot.size;
+        logoutBtn.addEventListener("click", async () => {
+            try {
+                await DB.logoutAdmin();
+            } catch (err) {
+                console.error("Logout error:", err);
+            }
+        });
 
-                if (snapshot.empty) {
-                    ordersList.innerHTML = "<p>لا توجد طلبات مسجلة حتى الآن.</p>";
-                    return;
-                }
-
-                ordersList.innerHTML = "";
-                snapshot.forEach((docSnap) => {
-                    const order = docSnap.data();
-                    totalSales += Number(order.total || 0);
-                    const isDone = order.status && order.status.includes("المندوب");
-
-                    const itemsHtml = (order.items || []).map(i => `• ${i.name} (×${i.qty})`).join("<br>");
-
-                    const card = document.createElement("div");
-                    card.className = "order-card";
-                    card.innerHTML = `
-                        <div class="order-top">
-                            <strong>👤 ${order.customerName} (${order.customerPhone})</strong>
-                            <span class="badge ${isDone ? "done" : ""}">${order.status || "جديد"}</span>
-                        </div>
-                        <div style="font-size:13px;color:#374151;">📍 ${order.customerAddress} | 💳 ${order.paymentMethod}</div>
-                        <div class="order-items">${itemsHtml}</div>
-                        <div style="font-weight:800;color:#1B4332;">💰 الإجمالي: ${Number(order.total).toFixed(2)} ر.س</div>
-                        <div class="order-actions">
-                            <button class="btn-sm btn-green" data-dispatch="${docSnap.id}">🛵 تم التسليم للمندوب</button>
-                            <button class="btn-sm btn-red" data-del-order="${docSnap.id}">حذف</button>
-                        </div>
-                    `;
-                    ordersList.appendChild(card);
-                });
-
-                document.getElementById("totalSalesAmount").textContent = totalSales.toFixed(2);
-            });
-
-            document.getElementById("ordersList").addEventListener("click", async (e) => {
-                const dispatchId = e.target.dataset.dispatch;
-                const delId = e.target.dataset.delOrder;
+        ordersList.addEventListener("click", async (e) => {
+            if (!isAuthed()) return;
+            const dispatchId = e.target.dataset.dispatch;
+            const delId = e.target.dataset.delOrder;
+            try {
                 if (dispatchId) {
                     await updateDoc(doc(db, "orders", dispatchId), { status: "طلع مع المندوب 🛵" });
                 }
                 if (delId && confirm("حذف هذا الطلب؟")) {
                     await deleteDoc(doc(db, "orders", delId));
                 }
-            });
+            } catch (err) {
+                console.error("Order update error:", err);
+                alert("تعذر تحديث الطلب. تأكد من صلاحيات الحساب.");
+            }
+        });
 
-            document.getElementById("addProductForm").addEventListener("submit", async (e) => {
-                e.preventDefault();
-                const [cat, catName] = document.getElementById("pCategory").value.split("|");
+        document.getElementById("addProductForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!isAuthed()) return;
+            const [cat, catName] = document.getElementById("pCategory").value.split("|");
+            try {
                 await addDoc(collection(db, "products"), {
                     id: Date.now(),
                     name: document.getElementById("pName").value.trim(),
@@ -205,30 +326,35 @@
                 });
                 e.target.reset();
                 alert("تم إضافة المنتج للمتجر بنجاح ✓");
-            });
+            } catch (err) {
+                console.error("Add product error:", err);
+                alert("تعذر إضافة المنتج. تأكد من صلاحيات الحساب.");
+            }
+        });
 
-            onSnapshot(collection(db, "products"), (snap) => {
-                document.getElementById("cloudProductsCount").textContent = snap.size;
-                const list = document.getElementById("cloudProductsList");
-                list.innerHTML = snap.empty ? "" : "<h4 style='margin-bottom:8px;'>المنتجات المضافة حالياً:</h4>";
-                snap.forEach(d => {
-                    const p = d.data();
-                    list.innerHTML += `
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid #eee;font-size:13px;">
-                            <span>${p.name} - <strong>${p.price} ر.س</strong></span>
-                            <button class="btn-sm btn-red" data-del-prod="${d.id}">حذف</button>
-                        </div>
-                    `;
-                });
-            });
-
-            document.getElementById("cloudProductsList").addEventListener("click", async (e) => {
-                const id = e.target.dataset.delProd;
-                if (id && confirm("حذف المنتج من المتجر؟")) {
-                    await deleteDoc(doc(db, "products", id));
+        cloudProductsList.addEventListener("click", async (e) => {
+            if (!isAuthed()) return;
+            const delId = e.target.dataset.delProd;
+            const editId = e.target.dataset.editProd;
+            try {
+                if (editId) {
+                    const input = prompt("أدخل السعر الجديد (ر.س):", e.target.dataset.price);
+                    if (input === null) return;
+                    const price = parseFloat(input);
+                    if (!Number.isFinite(price) || price <= 0) {
+                        alert("سعر غير صالح.");
+                        return;
+                    }
+                    await updateDoc(doc(db, "products", editId), { price });
                 }
-            });
-        }, 700);
+                if (delId && confirm("حذف المنتج من المتجر؟")) {
+                    await deleteDoc(doc(db, "products", delId));
+                }
+            } catch (err) {
+                console.error("Product update error:", err);
+                alert("تعذر تحديث المنتج. تأكد من صلاحيات الحساب.");
+            }
+        });
     </script>
 </body>
 </html>

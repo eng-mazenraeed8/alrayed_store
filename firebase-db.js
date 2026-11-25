@@ -12,6 +12,13 @@ import {
     serverTimestamp,
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged as firebaseOnAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 
 const firebaseConfig = {
     apiKey: "AIzaSyBYYrMNXCR-pZRgp_RqoAahqqpsugRRZbA",
@@ -25,6 +32,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 // إتاحة دوال قاعدة البيانات للمتجر ولوحة التحكم
 window.AlRayedDB = {
@@ -71,8 +79,23 @@ window.AlRayedDB = {
         );
     },
 
+    // تسجيل دخول/خروج المسؤول عبر Firebase Authentication
+    loginAdmin(email, password) {
+        return signInWithEmailAndPassword(auth, email, password);
+    },
+    logoutAdmin() {
+        return signOut(auth);
+    },
+    onAuthStateChanged(callback) {
+        return firebaseOnAuthStateChanged(auth, callback);
+    },
+    get currentUser() {
+        return auth.currentUser;
+    },
+
     // 3. دوال لوحة التحكم (Admin)
     db,
+    auth,
     collection,
     addDoc,
     getDocs,
