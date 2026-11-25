@@ -244,8 +244,6 @@ const checkoutBtn = document.getElementById("checkoutBtn");
 // ======================================
 // STATE
 // ======================================
-const CLOUD_PRODUCT_ID_OFFSET = 1000000;
-
 let selectedCategory = "all";
 let searchTerm = "";
 let cart = [];
@@ -255,7 +253,7 @@ try {
     const savedCart = JSON.parse(localStorage.getItem("alRayedCart") || "[]");
     if (Array.isArray(savedCart)) {
         cart = savedCart.filter(item =>
-            (products.some(p => p.id === item.id) || item.id === 99 || item.id >= CLOUD_PRODUCT_ID_OFFSET) &&
+            (products.some(p => p.id === item.id) || item.id === 99) &&
             Number.isInteger(item.quantity) &&
             item.quantity > 0
         );
@@ -519,18 +517,20 @@ function resetCheckoutState() {
     if (checkoutBtn) {
         checkoutBtn.textContent = "إتمام الطلب";
         checkoutBtn.style.backgroundColor = "";
+        if (window.AlRayedDB) {
+    window.AlRayedDB.saveOrderToCloud({
+        customerName: name,
+        customerPhone: phone,
+        customerAddress: address,
+        paymentMethod: selectedPayment,
+        items: cart.map(item => {
+            const p = products.find(prod => prod.id === item.id);
+            return { name: p ? p.name : "منتج", qty: item.quantity, price: p ? p.price : 0 };
+        }),
+        total: totalAmount
+    });
+        }
     }
-}
-
-const ORDER_SAVE_TIMEOUT_MS = 5000;
-
-async function saveOrderToFirestore(orderData) {
-    if (!window.AlRayedDB) {
-        console.error("Firestore is not ready; order was not saved to the cloud.");
-        return null;
-    }
-    const timeout = new Promise(resolve => setTimeout(() => resolve(null), ORDER_SAVE_TIMEOUT_MS));
-    return Promise.race([window.AlRayedDB.saveOrderToCloud(orderData), timeout]);
 }
 
 function openCart() {
@@ -666,9 +666,8 @@ document.querySelectorAll(".pay-option").forEach(option => {
 });
 
 if (checkoutBtn) {
-    checkoutBtn.addEventListener("click", async (e) => {
+    checkoutBtn.addEventListener("click", (e) => {
         e.preventDefault();
-        if (checkoutBtn.disabled) return;
 
         if (cart.length === 0) {
             showToast("السلة فارغة، أضف منتجات أولًا");
@@ -719,27 +718,6 @@ if (checkoutBtn) {
         orderDetails += `━━━━━━━━━━━━━━\n`;
         orderDetails += `🚚 *التوصيل:* ${shippingStatus}\n`;
         orderDetails += `💰 *الإجمالي:* ${totalAmount.toFixed(2)} ر.س`;
-
-        const orderItems = cart.reduce((list, item) => {
-            const p = products.find(prod => prod.id === item.id);
-            if (p) list.push({ name: p.name, qty: item.quantity, price: p.price });
-            return list;
-        }, []);
-
-        checkoutBtn.disabled = true;
-        showToast("جاري حفظ طلبك... ⏳");
-
-        const orderId = await saveOrderToFirestore({
-            customerName: name,
-            customerPhone: phone,
-            customerAddress: address,
-            paymentMethod: selectedPayment,
-            items: orderItems,
-            total: Number(totalAmount.toFixed(2))
-        });
-
-        checkoutBtn.disabled = false;
-        if (orderId) orderDetails += `\n🔖 *رقم الطلب:* ${orderId}`;
 
         startOrderTracking();
         closeCartDrawer();
@@ -1168,49 +1146,129 @@ updateCart = function() {
     baseUpdateCart();
     updateCartWithDiscount();
 };
-// مزامنة لحظية للمنتجات المضافة من لوحة التحكم (Firebase Firestore)
-function cloudProductId(firebaseId) {
-    let hash = 0;
-    for (const ch of firebaseId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-    return CLOUD_PRODUCT_ID_OFFSET + (hash % 1000000000);
-}
+// تحميل المنتجات المضافة من لوحة التحكم (Firebase)
+window.addEventListener("load", async () => {
+    setTimeout(async () => {
+        if (window.AlRayedDB) {
+            const extraProducts = await window.AlRayedDB.loadCloudProducts();
+            if (extraProducts.length > 0) {
+                extraProducts.forEach(item => {
+                    if (!products.some(p => p.name === item.name)) {
+                        products.unshift({
+                            id: Number(item.id) || Date.now(),
+                            name: item.name,
+                            category: item.category || "dates",
+                            categoryName: item.categoryName || "منتجات مميزة",
+                            price: Number(item.price),
+                            image: item.image
+                        });
+                    }
+                });
+                displayProducts();
+            }
+        }
+    }, 800);
+});
+// ======================================
+// ======================================
+// 23. STRONG SCROLL MOTION & LIVE PILL
+// ======================================
+(function initStrongScrollMotion() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-function applyCloudProducts(items) {
-    for (let i = products.length - 1; i >= 0; i--) {
-        if (products[i].firebaseId) products.splice(i, 1);
+    const ambientBg = document.querySelector(".ambient-bg");
+    if (!ambientBg) return;
+
+    ambientBg.innerHTML = `
+        <div class="bg-grid-layer" id="bgGridLayer"></div>
+
+        <svg class="motion-shape leaf-solid" id="mShape1" style="top:12%; right:3%; width:145px;" viewBox="0 0 100 100" fill="currentColor">
+            <path d="M50 8 C22 30, 16 65, 50 92 C84 65, 78 30, 50 8 Z M50 22 L50 80"/>
+        </svg>
+
+        <div class="motion-shape gold-ring" id="mShape2" style="top:28%; left:4%; width:150px; height:150px;"></div>
+
+        <div class="motion-shape emerald-pill" id="mShape3" style="top:58%; right:5%; width:190px; height:54px;"></div>
+
+        <svg class="motion-shape leaf-solid" id="mShape4" style="top:72%; left:6%; width:135px;" viewBox="0 0 100 100" fill="currentColor">
+            <path d="M15 82 C20 38, 52 16, 86 20 C82 56, 58 82, 15 82 Z"/>
+        </svg>
+    `;
+
+    const pill = document.createElement("div");
+    pill.className = "scroll-pill-indicator";
+    pill.innerHTML = `<span id="scrollZoneName">الرئيسية</span> • <strong id="scrollPercentText">0%</strong>`;
+    document.body.appendChild(pill);
+
+    const gridEl = document.getElementById("bgGridLayer");
+    const s1 = document.getElementById("mShape1");
+    const s2 = document.getElementById("mShape2");
+    const s3 = document.getElementById("mShape3");
+    const s4 = document.getElementById("mShape4");
+    const zoneEl = document.getElementById("scrollZoneName");
+    const pctEl = document.getElementById("scrollPercentText");
+
+    let lastY = window.scrollY;
+    let tilt = 0;
+    let rafId = null;
+
+    function updateMotion() {
+        const y = window.scrollY || 0;
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const progress = Math.min(1, Math.max(0, y / maxScroll));
+        const pct = Math.round(progress * 100);
+        const delta = y - lastY;
+        lastY = y;
+
+        // حركة واضحة لأشكال الخلفية مع السكرول
+        if (gridEl) {
+            gridEl.style.transform = `translate3d(${(progress * -60).toFixed(1)}px, ${(y * -0.18).toFixed(1)}px, 0)`;
+        }
+        if (s1) {
+            s1.style.transform = `translate3d(${(Math.sin(progress * Math.PI * 2) * 35).toFixed(1)}px, ${(progress * -240).toFixed(1)}px, 0) rotate(${(progress * 140).toFixed(1)}deg) scale(${(1 + progress * 0.2).toFixed(2)})`;
+        }
+        if (s2) {
+            s2.style.transform = `translate3d(${(progress * 55).toFixed(1)}px, ${(progress * -190).toFixed(1)}px, 0) rotate(${(-progress * 210).toFixed(1)}deg)`;
+        }
+        if (s3) {
+            s3.style.transform = `translate3d(${(progress * -70).toFixed(1)}px, ${(progress * -150).toFixed(1)}px, 0) rotate(${(-18 + progress * 45).toFixed(1)}deg)`;
+        }
+        if (s4) {
+            s4.style.transform = `translate3d(${(Math.cos(progress * Math.PI * 2) * 40).toFixed(1)}px, ${(progress * -210).toFixed(1)}px, 0) rotate(${(-progress * 120).toFixed(1)}deg)`;
+        }
+
+        // حركة ميلان وصعود/هبوط ملموسة للكروت حسب سرعة السكرول
+        const targetTilt = Math.max(-5, Math.min(5, delta * 0.18));
+        tilt += (targetTilt - tilt) * 0.4;
+
+        document.querySelectorAll(".product-card").forEach((card, i) => {
+            if (!card.matches(":hover")) {
+                const wave = Math.sin(progress * Math.PI * 3 + i * 0.6) * 6;
+                card.style.transform = `perspective(800px) translateY(${wave.toFixed(1)}px) rotateX(${tilt.toFixed(2)}deg)`;
+            }
+        });
+
+        // تحديث كبسولة السكرول
+        pill.classList.toggle("visible", y > 120);
+        if (pctEl) pctEl.textContent = `${pct}%`;
+        if (zoneEl) {
+            if (pct < 22) zoneEl.textContent = "🌿 الواجهة";
+            else if (pct < 68) zoneEl.textContent = "🛒 المنتجات";
+            else if (pct < 90) zoneEl.textContent = "🔥 العروض";
+            else zoneEl.textContent = "📞 تواصل معنا";
+        }
+
+        if (Math.abs(tilt) > 0.08) {
+            tilt *= 0.8;
+            rafId = requestAnimationFrame(updateMotion);
+        } else {
+            rafId = null;
+        }
     }
 
-    const cloudProducts = items
-        .filter(item => item.name && Number.isFinite(Number(item.price)))
-        .filter(item => !products.some(p => p.name === item.name))
-        .map(item => ({
-            id: cloudProductId(item.firebaseId),
-            firebaseId: item.firebaseId,
-            name: String(item.name),
-            category: item.category || "dates",
-            categoryName: item.categoryName || "منتجات مميزة",
-            price: Number(item.price),
-            image: item.image || "assets/Al%20Rayed%20Store%20Organic%20Emblem.png"
-        }));
-
-    products.unshift(...cloudProducts);
-
-    const cartBefore = cart.length;
-    cart = cart.filter(item => item.id === 99 || products.some(p => p.id === item.id));
-    if (cart.length !== cartBefore) showToast("تم تحديث السلة بعد تغيير المنتجات");
-
-    displayProducts();
-    updateCart();
-}
-
-function startCloudProductsSync() {
-    if (window.AlRayedDB && typeof window.AlRayedDB.subscribeToProducts === "function") {
-        window.AlRayedDB.subscribeToProducts(applyCloudProducts);
-    }
-}
-
-if (window.AlRayedDB) {
-    startCloudProductsSync();
-} else {
-    window.addEventListener("alrayed-db-ready", startCloudProductsSync, { once: true });
-}
+    window.addEventListener("scroll", () => {
+        if (!rafId) {
+            rafId = requestAnimationFrame(updateMotion);
+        }
+    }, { passive: true });
+})();
