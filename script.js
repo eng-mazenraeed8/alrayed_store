@@ -1171,104 +1171,66 @@ window.addEventListener("load", async () => {
 });
 // ======================================
 // ======================================
-// 23. STRONG SCROLL MOTION & LIVE PILL
+// 23. LUMINOUS SPOTLIGHT & CARD REFLECT
 // ======================================
-(function initStrongScrollMotion() {
+(function initLuminousReflect() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const ambientBg = document.querySelector(".ambient-bg");
     if (!ambientBg) return;
 
     ambientBg.innerHTML = `
-        <div class="bg-grid-layer" id="bgGridLayer"></div>
-
-        <svg class="motion-shape leaf-solid" id="mShape1" style="top:12%; right:3%; width:145px;" viewBox="0 0 100 100" fill="currentColor">
-            <path d="M50 8 C22 30, 16 65, 50 92 C84 65, 78 30, 50 8 Z M50 22 L50 80"/>
-        </svg>
-
-        <div class="motion-shape gold-ring" id="mShape2" style="top:28%; left:4%; width:150px; height:150px;"></div>
-
-        <div class="motion-shape emerald-pill" id="mShape3" style="top:58%; right:5%; width:190px; height:54px;"></div>
-
-        <svg class="motion-shape leaf-solid" id="mShape4" style="top:72%; left:6%; width:135px;" viewBox="0 0 100 100" fill="currentColor">
-            <path d="M15 82 C20 38, 52 16, 86 20 C82 56, 58 82, 15 82 Z"/>
-        </svg>
+        <div class="lum-orb lum-orb-emerald" id="lumEmerald"></div>
+        <div class="lum-orb lum-orb-gold" id="lumGold"></div>
+        <div class="lum-cursor-spot" id="lumCursorSpot"></div>
     `;
 
-    const pill = document.createElement("div");
-    pill.className = "scroll-pill-indicator";
-    pill.innerHTML = `<span id="scrollZoneName">الرئيسية</span> • <strong id="scrollPercentText">0%</strong>`;
-    document.body.appendChild(pill);
+    const emeraldOrb = document.getElementById("lumEmerald");
+    const goldOrb = document.getElementById("lumGold");
+    const cursorSpot = document.getElementById("lumCursorSpot");
 
-    const gridEl = document.getElementById("bgGridLayer");
-    const s1 = document.getElementById("mShape1");
-    const s2 = document.getElementById("mShape2");
-    const s3 = document.getElementById("mShape3");
-    const s4 = document.getElementById("mShape4");
-    const zoneEl = document.getElementById("scrollZoneName");
-    const pctEl = document.getElementById("scrollPercentText");
+    let targetX = window.innerWidth * 0.5;
+    let targetY = window.innerHeight * 0.4;
+    let currentX = targetX;
+    let currentY = targetY;
 
-    let lastY = window.scrollY;
-    let tilt = 0;
-    let rafId = null;
+    // 1. تتبع الماوس للكشاف الضوئي والريفلكت جوه الكروت
+    document.addEventListener("mousemove", (e) => {
+        targetX = e.clientX;
+        targetY = e.clientY;
 
-    function updateMotion() {
-        const y = window.scrollY || 0;
-        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-        const progress = Math.min(1, Math.max(0, y / maxScroll));
-        const pct = Math.round(progress * 100);
-        const delta = y - lastY;
-        lastY = y;
-
-        // حركة واضحة لأشكال الخلفية مع السكرول
-        if (gridEl) {
-            gridEl.style.transform = `translate3d(${(progress * -60).toFixed(1)}px, ${(y * -0.18).toFixed(1)}px, 0)`;
-        }
-        if (s1) {
-            s1.style.transform = `translate3d(${(Math.sin(progress * Math.PI * 2) * 35).toFixed(1)}px, ${(progress * -240).toFixed(1)}px, 0) rotate(${(progress * 140).toFixed(1)}deg) scale(${(1 + progress * 0.2).toFixed(2)})`;
-        }
-        if (s2) {
-            s2.style.transform = `translate3d(${(progress * 55).toFixed(1)}px, ${(progress * -190).toFixed(1)}px, 0) rotate(${(-progress * 210).toFixed(1)}deg)`;
-        }
-        if (s3) {
-            s3.style.transform = `translate3d(${(progress * -70).toFixed(1)}px, ${(progress * -150).toFixed(1)}px, 0) rotate(${(-18 + progress * 45).toFixed(1)}deg)`;
-        }
-        if (s4) {
-            s4.style.transform = `translate3d(${(Math.cos(progress * Math.PI * 2) * 40).toFixed(1)}px, ${(progress * -210).toFixed(1)}px, 0) rotate(${(-progress * 120).toFixed(1)}deg)`;
-        }
-
-        // حركة ميلان وصعود/هبوط ملموسة للكروت حسب سرعة السكرول
-        const targetTilt = Math.max(-5, Math.min(5, delta * 0.18));
-        tilt += (targetTilt - tilt) * 0.4;
-
-        document.querySelectorAll(".product-card").forEach((card, i) => {
-            if (!card.matches(":hover")) {
-                const wave = Math.sin(progress * Math.PI * 3 + i * 0.6) * 6;
-                card.style.transform = `perspective(800px) translateY(${wave.toFixed(1)}px) rotateX(${tilt.toFixed(2)}deg)`;
-            }
-        });
-
-        // تحديث كبسولة السكرول
-        pill.classList.toggle("visible", y > 120);
-        if (pctEl) pctEl.textContent = `${pct}%`;
-        if (zoneEl) {
-            if (pct < 22) zoneEl.textContent = "🌿 الواجهة";
-            else if (pct < 68) zoneEl.textContent = "🛒 المنتجات";
-            else if (pct < 90) zoneEl.textContent = "🔥 العروض";
-            else zoneEl.textContent = "📞 تواصل معنا";
-        }
-
-        if (Math.abs(tilt) > 0.08) {
-            tilt *= 0.8;
-            rafId = requestAnimationFrame(updateMotion);
-        } else {
-            rafId = null;
-        }
-    }
-
-    window.addEventListener("scroll", () => {
-        if (!rafId) {
-            rafId = requestAnimationFrame(updateMotion);
+        const card = e.target.closest(".product-card, .trust-item");
+        if (card) {
+            const rect = card.getBoundingClientRect();
+            card.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+            card.style.setProperty("--my", `${e.clientY - rect.top}px`);
         }
     }, { passive: true });
+
+    // 2. حركة ناعمة مستمرة للإضاءة مع الماوس والسكرول
+    function animateLights() {
+        currentX += (targetX - currentX) * 0.12;
+        currentY += (targetY - currentY) * 0.12;
+
+        const scrollY = window.scrollY || 0;
+        const offsetX = (currentX / window.innerWidth - 0.5) * 60;
+        const offsetY = (currentY / window.innerHeight - 0.5) * 60;
+
+        if (cursorSpot) {
+            cursorSpot.style.left = `${currentX}px`;
+            cursorSpot.style.top = `${currentY}px`;
+        }
+
+        if (emeraldOrb) {
+            emeraldOrb.style.transform = `translate3d(${-offsetX}px, ${Math.sin(scrollY * 0.004) * 55 - offsetY * 0.6}px, 0)`;
+        }
+
+        if (goldOrb) {
+            goldOrb.style.transform = `translate3d(${offsetX * 1.1}px, ${Math.cos(scrollY * 0.004) * -55 + offsetY * 0.6}px, 0)`;
+        }
+
+        requestAnimationFrame(animateLights);
+    }
+
+    animateLights();
 })();
