@@ -1171,66 +1171,132 @@ window.addEventListener("load", async () => {
 });
 // ======================================
 // ======================================
-// 23. LUMINOUS SPOTLIGHT & CARD REFLECT
+// 23. INTERACTIVE FALLING LEAVES (SPEED + SCROLL + CURSOR)
 // ======================================
-(function initLuminousReflect() {
+(function initInteractiveLeaves() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const ambientBg = document.querySelector(".ambient-bg");
     if (!ambientBg) return;
 
-    ambientBg.innerHTML = `
-        <div class="lum-orb lum-orb-emerald" id="lumEmerald"></div>
-        <div class="lum-orb lum-orb-gold" id="lumGold"></div>
-        <div class="lum-cursor-spot" id="lumCursorSpot"></div>
+    const leafSvg = `
+        <svg viewBox="0 0 100 100" width="100%" height="100%" fill="currentColor">
+            <path d="M52 6 C22 24, 14 62, 48 94 C78 68, 84 30, 52 6 Z"/>
+            <path d="M49 14 C46 42, 45 68, 48 92" stroke="rgba(255,255,255,0.45)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M47 36 L31 27 M47 52 L64 42 M47 68 L32 60" stroke="rgba(255,255,255,0.35)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+        </svg>
     `;
 
-    const emeraldOrb = document.getElementById("lumEmerald");
-    const goldOrb = document.getElementById("lumGold");
-    const cursorSpot = document.getElementById("lumCursorSpot");
+    const isMobile = window.innerWidth < 768;
+    const leafCount = isMobile ? 8 : 14;
+    const tones = ["leaf-green", "leaf-emerald", "leaf-gold"];
+    const leaves = [];
 
-    let targetX = window.innerWidth * 0.5;
-    let targetY = window.innerHeight * 0.4;
-    let currentX = targetX;
-    let currentY = targetY;
+    ambientBg.innerHTML = "";
 
-    // 1. تتبع الماوس للكشاف الضوئي والريفلكت جوه الكروت
+    for (let i = 0; i < leafCount; i++) {
+        const el = document.createElement("div");
+        const tone = tones[i % tones.length];
+        const size = isMobile ? 22 + (i % 3) * 8 : 26 + (i % 4) * 10;
+
+        el.className = `falling-leaf ${tone}`;
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
+        el.innerHTML = leafSvg;
+        ambientBg.appendChild(el);
+
+        leaves.push({
+            el,
+            x: ((i * 97) % 94) + 3, // نسبة مئوية أفقية
+            y: Math.random() * window.innerHeight,
+            baseSpeed: 0.45 + (i % 5) * 0.16, // نزول هادي افتراضي
+            swayAmp: 18 + (i % 4) * 9,
+            swayFreq: 0.012 + (i % 3) * 0.004,
+            phase: i * 1.15,
+            rot: Math.random() * 360,
+            rotSpeed: (i % 2 === 0 ? 1 : -1) * (0.45 + (i % 3) * 0.25),
+            pushX: 0,
+            pushY: 0
+        });
+    }
+
+    let lastScrollY = window.scrollY || 0;
+    let scrollBoost = 0; // يزيد لما السكرول يكون سريع
+    let pointerX = -999;
+    let pointerY = -999;
+
+    window.addEventListener("scroll", () => {
+        const currentY = window.scrollY || 0;
+        const delta = Math.abs(currentY - lastScrollY);
+        lastScrollY = currentY;
+
+        // كل ما حركة السكرول تكون أسرع، السرعة بتزيد معاك
+        scrollBoost = Math.min(9.5, scrollBoost + delta * 0.14);
+    }, { passive: true });
+
     document.addEventListener("mousemove", (e) => {
-        targetX = e.clientX;
-        targetY = e.clientY;
+        pointerX = e.clientX;
+        pointerY = e.clientY;
+    }, { passive: true });
 
-        const card = e.target.closest(".product-card, .trust-item");
-        if (card) {
-            const rect = card.getBoundingClientRect();
-            card.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-            card.style.setProperty("--my", `${e.clientY - rect.top}px`);
+    document.addEventListener("touchmove", (e) => {
+        if (e.touches && e.touches[0]) {
+            pointerX = e.touches[0].clientX;
+            pointerY = e.touches[0].clientY;
         }
     }, { passive: true });
 
-    // 2. حركة ناعمة مستمرة للإضاءة مع الماوس والسكرول
-    function animateLights() {
-        currentX += (targetX - currentX) * 0.12;
-        currentY += (targetY - currentY) * 0.12;
+    function animateLeaves() {
+        const vh = window.innerHeight || 800;
+        const vw = window.innerWidth || 1200;
 
-        const scrollY = window.scrollY || 0;
-        const offsetX = (currentX / window.innerWidth - 0.5) * 60;
-        const offsetY = (currentY / window.innerHeight - 0.5) * 60;
+        // تهدئة سرعة السكرول تدريجياً لما تقف
+        scrollBoost *= 0.92;
 
-        if (cursorSpot) {
-            cursorSpot.style.left = `${currentX}px`;
-            cursorSpot.style.top = `${currentY}px`;
+        for (let i = 0; i < leaves.length; i++) {
+            const leaf = leaves[i];
+            leaf.phase += leaf.swayFreq * (1 + scrollBoost * 0.35);
+
+            // النزول يتأثر بالسرعة العادية + سرعة السكرول
+            const speedMultiplier = 1 + scrollBoost * 1.35;
+            leaf.y += leaf.baseSpeed * speedMultiplier;
+            leaf.rot += leaf.rotSpeed * speedMultiplier;
+
+            const px = (leaf.x / 100) * vw + Math.sin(leaf.phase) * leaf.swayAmp;
+            const py = leaf.y;
+
+            // تفاعل الورقة لو الماوس أو الصباع قرب منها
+            const dx = px - pointerX;
+            const dy = py - pointerY;
+            const dist = Math.hypot(dx, dy);
+            const repRadius = 135;
+
+            if (dist < repRadius && dist > 1) {
+                const force = (repRadius - dist) / repRadius;
+                leaf.pushX += (dx / dist) * force * 2.4;
+                leaf.pushY += (dy / dist) * force * 2.4;
+            }
+
+            leaf.pushX *= 0.88;
+            leaf.pushY *= 0.88;
+
+            // لو الورقة طلعت برا الشاشة من تحت أو فوق ترجع من الطرف التاني
+            if (leaf.y > vh + 80) {
+                leaf.y = -70;
+                leaf.x = Math.random() * 92 + 4;
+            } else if (leaf.y < -85) {
+                leaf.y = vh + 60;
+            }
+
+            const finalX = px + leaf.pushX;
+            const finalY = py + leaf.pushY;
+            const tilt = Math.cos(leaf.phase) * 14;
+
+            leaf.el.style.transform = `translate3d(${finalX.toFixed(1)}px, ${finalY.toFixed(1)}px, 0) rotate(${(leaf.rot + tilt).toFixed(1)}deg)`;
         }
 
-        if (emeraldOrb) {
-            emeraldOrb.style.transform = `translate3d(${-offsetX}px, ${Math.sin(scrollY * 0.004) * 55 - offsetY * 0.6}px, 0)`;
-        }
-
-        if (goldOrb) {
-            goldOrb.style.transform = `translate3d(${offsetX * 1.1}px, ${Math.cos(scrollY * 0.004) * -55 + offsetY * 0.6}px, 0)`;
-        }
-
-        requestAnimationFrame(animateLights);
+        requestAnimationFrame(animateLeaves);
     }
 
-    animateLights();
+    animateLeaves();
 })();
