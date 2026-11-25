@@ -3384,3 +3384,39 @@ body.dark-mode {
 .product-card:hover {
     transform: translateY(-6px) !important;
 }
+/* =====================================
+   23. RESTORE BASE CLEAN THEME
+===================================== */
+.ambient-bg,
+.bg-grid-layer,
+.motion-shape,
+.bg-floating-item,
+.scroll-pill-indicator,
+.light-beam,
+.glow-dot,
+.lum-cursor-spot,
+.lum-orb,
+.falling-leaf {
+    display: none !important;
+}
+
+body {
+    background-color: #FAF9F6 !important;
+    background-image: radial-gradient(rgba(27, 67, 50, 0.11) 1.3px, transparent 1.3px) !important;
+    background-size: 28px 28px !important;
+}
+
+body.dark-mode {
+    background-color: #0B1913 !important;
+    background-image: radial-gradient(rgba(110, 231, 183, 0.08) 1.3px, transparent 1.3px) !important;
+    background-size: 28px 28px !important;
+}
+
+.product-card,
+.product-card:hover {
+    transform: none;
+}
+
+.product-card:hover {
+    transform: translateY(-6px) !important;
+}
