@@ -3420,3 +3420,17 @@ body.dark-mode {
 .product-card:hover {
     transform: translateY(-6px) !important;
 }
+/* =====================================
+   MOBILE BOTTOM EDGE & THEME SYNC
+===================================== */
+html,
+body {
+    min-height: 100%;
+    background-color: #FAF9F6;
+    overscroll-behavior-y: none;
+}
+
+html.dark-mode,
+body.dark-mode {
+    background-color: #0B1913 !important;
+}

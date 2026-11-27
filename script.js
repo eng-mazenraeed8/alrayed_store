@@ -914,6 +914,14 @@ const hoursEl = document.getElementById("hoursVal");
 const minsEl = document.getElementById("minsVal");
 const secsEl = document.getElementById("secsVal");
 
+const isDark = document.body.classList.contains("dark-mode");
+const metaTheme = document.getElementById("themeColorMeta");
+if (metaTheme) {
+    metaTheme.setAttribute("content", isDark ? "#0B1913" : "#1B4332");
+}
+
+
+
 if (hoursEl && minsEl && secsEl) {
     setInterval(() => {
         if (totalSeconds <= 0) totalSeconds = 12 * 3600;
@@ -1171,132 +1179,4 @@ window.addEventListener("load", async () => {
 });
 // ======================================
 // ======================================
-// 23. INTERACTIVE FALLING LEAVES (SPEED + SCROLL + CURSOR)
-// ======================================
-(function initInteractiveLeaves() {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    const ambientBg = document.querySelector(".ambient-bg");
-    if (!ambientBg) return;
-
-    const leafSvg = `
-        <svg viewBox="0 0 100 100" width="100%" height="100%" fill="currentColor">
-            <path d="M52 6 C22 24, 14 62, 48 94 C78 68, 84 30, 52 6 Z"/>
-            <path d="M49 14 C46 42, 45 68, 48 92" stroke="rgba(255,255,255,0.45)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-            <path d="M47 36 L31 27 M47 52 L64 42 M47 68 L32 60" stroke="rgba(255,255,255,0.35)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-        </svg>
-    `;
-
-    const isMobile = window.innerWidth < 768;
-    const leafCount = isMobile ? 8 : 14;
-    const tones = ["leaf-green", "leaf-emerald", "leaf-gold"];
-    const leaves = [];
-
-    ambientBg.innerHTML = "";
-
-    for (let i = 0; i < leafCount; i++) {
-        const el = document.createElement("div");
-        const tone = tones[i % tones.length];
-        const size = isMobile ? 22 + (i % 3) * 8 : 26 + (i % 4) * 10;
-
-        el.className = `falling-leaf ${tone}`;
-        el.style.width = `${size}px`;
-        el.style.height = `${size}px`;
-        el.innerHTML = leafSvg;
-        ambientBg.appendChild(el);
-
-        leaves.push({
-            el,
-            x: ((i * 97) % 94) + 3, // نسبة مئوية أفقية
-            y: Math.random() * window.innerHeight,
-            baseSpeed: 0.45 + (i % 5) * 0.16, // نزول هادي افتراضي
-            swayAmp: 18 + (i % 4) * 9,
-            swayFreq: 0.012 + (i % 3) * 0.004,
-            phase: i * 1.15,
-            rot: Math.random() * 360,
-            rotSpeed: (i % 2 === 0 ? 1 : -1) * (0.45 + (i % 3) * 0.25),
-            pushX: 0,
-            pushY: 0
-        });
-    }
-
-    let lastScrollY = window.scrollY || 0;
-    let scrollBoost = 0; // يزيد لما السكرول يكون سريع
-    let pointerX = -999;
-    let pointerY = -999;
-
-    window.addEventListener("scroll", () => {
-        const currentY = window.scrollY || 0;
-        const delta = Math.abs(currentY - lastScrollY);
-        lastScrollY = currentY;
-
-        // كل ما حركة السكرول تكون أسرع، السرعة بتزيد معاك
-        scrollBoost = Math.min(9.5, scrollBoost + delta * 0.14);
-    }, { passive: true });
-
-    document.addEventListener("mousemove", (e) => {
-        pointerX = e.clientX;
-        pointerY = e.clientY;
-    }, { passive: true });
-
-    document.addEventListener("touchmove", (e) => {
-        if (e.touches && e.touches[0]) {
-            pointerX = e.touches[0].clientX;
-            pointerY = e.touches[0].clientY;
-        }
-    }, { passive: true });
-
-    function animateLeaves() {
-        const vh = window.innerHeight || 800;
-        const vw = window.innerWidth || 1200;
-
-        // تهدئة سرعة السكرول تدريجياً لما تقف
-        scrollBoost *= 0.92;
-
-        for (let i = 0; i < leaves.length; i++) {
-            const leaf = leaves[i];
-            leaf.phase += leaf.swayFreq * (1 + scrollBoost * 0.35);
-
-            // النزول يتأثر بالسرعة العادية + سرعة السكرول
-            const speedMultiplier = 1 + scrollBoost * 1.35;
-            leaf.y += leaf.baseSpeed * speedMultiplier;
-            leaf.rot += leaf.rotSpeed * speedMultiplier;
-
-            const px = (leaf.x / 100) * vw + Math.sin(leaf.phase) * leaf.swayAmp;
-            const py = leaf.y;
-
-            // تفاعل الورقة لو الماوس أو الصباع قرب منها
-            const dx = px - pointerX;
-            const dy = py - pointerY;
-            const dist = Math.hypot(dx, dy);
-            const repRadius = 135;
-
-            if (dist < repRadius && dist > 1) {
-                const force = (repRadius - dist) / repRadius;
-                leaf.pushX += (dx / dist) * force * 2.4;
-                leaf.pushY += (dy / dist) * force * 2.4;
-            }
-
-            leaf.pushX *= 0.88;
-            leaf.pushY *= 0.88;
-
-            // لو الورقة طلعت برا الشاشة من تحت أو فوق ترجع من الطرف التاني
-            if (leaf.y > vh + 80) {
-                leaf.y = -70;
-                leaf.x = Math.random() * 92 + 4;
-            } else if (leaf.y < -85) {
-                leaf.y = vh + 60;
-            }
-
-            const finalX = px + leaf.pushX;
-            const finalY = py + leaf.pushY;
-            const tilt = Math.cos(leaf.phase) * 14;
-
-            leaf.el.style.transform = `translate3d(${finalX.toFixed(1)}px, ${finalY.toFixed(1)}px, 0) rotate(${(leaf.rot + tilt).toFixed(1)}deg)`;
-        }
-
-        requestAnimationFrame(animateLeaves);
-    }
-
-    animateLeaves();
-})();
+//
