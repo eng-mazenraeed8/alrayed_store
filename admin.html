@@ -123,8 +123,30 @@
         </div>
     </div>
 
-  <script type="module" src="firebase-db.js"></script>
-    <script type="module">
+ <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import {
+            getFirestore, collection, addDoc, updateDoc, deleteDoc,
+            doc, query, orderBy, onSnapshot
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import {
+            getAuth, signInWithEmailAndPassword, onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBYYrMNXCR-pZRgp_RqoAahqqpsugRRZbA",
+            authDomain: "al-rayed-store.firebaseapp.com",
+            databaseURL: "https://al-rayed-store-default-rtdb.firebaseio.com",
+            projectId: "al-rayed-store",
+            storageBucket: "al-rayed-store.firebasestorage.app",
+            messagingSenderId: "821440658785",
+            appId: "1:821440658785:web:3b28996a710e2529dc9920"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
         const loginScreen = document.getElementById("adminLoginScreen");
         const emailInput = document.getElementById("adminEmailInput");
         const passInput = document.getElementById("adminPassInput");
@@ -136,29 +158,11 @@
             errorEl.style.display = "block";
         }
 
-        function waitForDB(timeoutMs = 5000) {
-            return new Promise((resolve, reject) => {
-                if (window.AlRayedDB) return resolve(window.AlRayedDB);
-                const start = Date.now();
-                const timer = setInterval(() => {
-                    if (window.AlRayedDB) {
-                        clearInterval(timer);
-                        resolve(window.AlRayedDB);
-                    } else if (Date.now() - start > timeoutMs) {
-                        clearInterval(timer);
-                        reject(new Error("تعذر الاتصال بقاعدة البيانات، تأكد من اسم الملف firebase-db.js"));
-                    }
-                }, 100);
-            });
-        }
-
         let dashboardInitialized = false;
 
-        function initDashboard(dbApi) {
+        function initDashboard() {
             if (dashboardInitialized) return;
             dashboardInitialized = true;
-
-            const { db, collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy, onSnapshot } = dbApi;
 
             const qOrders = query(collection(db, "orders"), orderBy("createdAt", "desc"));
             onSnapshot(qOrders, (snapshot) => {
@@ -198,6 +202,9 @@
                 });
 
                 document.getElementById("totalSalesAmount").textContent = totalSales.toFixed(2);
+            }, (err) => {
+                console.error("Orders error:", err);
+                document.getElementById("ordersList").innerHTML = `<p style="color:#B91C1C;">خطأ في قراءة الطلبات: ${err.code}</p>`;
             });
 
             document.getElementById("ordersList").addEventListener("click", async (e) => {
@@ -249,38 +256,35 @@
             });
         }
 
-        waitForDB().then((dbApi) => {
-            dbApi.onAuthStateChanged(dbApi.auth, (user) => {
-                if (user) {
-                    loginScreen.style.display = "none";
-                    initDashboard(dbApi);
-                } else {
-                    loginScreen.style.display = "flex";
-                }
-            });
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                loginScreen.style.display = "none";
+                initDashboard();
+            } else {
+                loginScreen.style.display = "flex";
+            }
+        });
 
-            loginBtn.addEventListener("click", async () => {
-                errorEl.style.display = "none";
-                const email = emailInput.value.trim();
-                const pass = passInput.value;
-                if (!email || !pass) {
-                    showLoginError("أدخل البريد الإلكتروني وكلمة المرور.");
-                    return;
-                }
-                loginBtn.disabled = true;
-                loginBtn.textContent = "جاري الدخول...";
-                try {
-                    await dbApi.loginAdmin(email, pass);
-                } catch (err) {
-                    showLoginError("بيانات الدخول غير صحيحة أو الحساب غير مفعل في Firebase Auth.");
-                } finally {
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = "دخول للوحة التحكم";
-                }
-            });
-        }).catch((err) => {
-            showLoginError(err.message);
+        loginBtn.addEventListener("click", async () => {
+            errorEl.style.display = "none";
+            const email = emailInput.value.trim();
+            const pass = passInput.value;
+            if (!email || !pass) {
+                showLoginError("أدخل البريد الإلكتروني وكلمة المرور.");
+                return;
+            }
+            loginBtn.disabled = true;
+            loginBtn.textContent = "جاري الدخول...";
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (err) {
+                showLoginError("فشل الدخول: " + err.code);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = "دخول للوحة التحكم";
+            }
         });
     </script>
+
 </body>
 </html>
