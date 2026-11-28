@@ -55,7 +55,7 @@ window.AlRayedDB = {
         try {
             const snapshot = await getDocs(collection(db, "products"));
             const cloudItems = [];
-            snapshot.forEach(d => {
+            snapshot.forEach((d) => {
                 cloudItems.push({ firebaseId: d.id, ...d.data() });
             });
             return cloudItems;
@@ -89,8 +89,4 @@ window.AlRayedDB = {
     onSnapshot
 };
 
-<ElicitationsGroup message="لو حابب نكمل ضبط الجزء السحابي في المتجر:">
-  <Elicitation label="تحديث لحظي للمنتجات" query="عايز المنتجات المضافة من لوحة التحكم تظهر وتتحذف في المتجر لحظيًا بدون ريفريش."/>
-  <Elicitation label="تأمين دخول الأدمن" query="عايز أربط دخول لوحة التحكم بـ Firebase Auth بدل كلمة المرور الثابتة."/>
-  <Elicitation label="مراجعة قواعد Firestore" query="هل قواعد Firestore الحالية كافية لحفظ الطلبات والمنتجات بأمان؟"/>
-</ElicitationsGroup>
+window.dispatchEvent(new Event("alrayed-db-ready"));
