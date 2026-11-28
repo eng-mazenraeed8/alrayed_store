@@ -3434,3 +3434,20 @@ html.dark-mode,
 body.dark-mode {
     background-color: #0B1913 !important;
 }
+/* =====================================
+   FIX SCROLL & MOBILE EDGE
+===================================== */
+html,
+body {
+    height: auto !important;
+    min-height: 100%;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto;
+    background-color: #FAF9F6;
+}
+
+html.dark-mode,
+body.dark-mode {
+    background-color: #0B1913 !important;
+}

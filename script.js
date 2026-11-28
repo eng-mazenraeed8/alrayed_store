@@ -502,6 +502,31 @@ if (cartItems) {
         if (action === "remove") {
             cart = cart.filter(i => i.id !== id);
             showToast("تم حذف المنتج من السلة");
+       
+       const discountedTotal = activeDiscountPercent > 0
+            ? totalAmount * (1 - activeDiscountPercent / 100)
+            : totalAmount;
+
+        if (window.AlRayedDB && typeof window.AlRayedDB.saveOrderToCloud === "function") {
+            window.AlRayedDB.saveOrderToCloud({
+                customerName: name,
+                customerPhone: phone,
+                customerAddress: address,
+                paymentMethod: selectedPayment,
+                discountPercent: activeDiscountPercent,
+                items: cart.map(item => {
+                    const p = products.find(prod => prod.id === item.id);
+                    return {
+                        name: p ? p.name : "منتج",
+                        qty: item.quantity,
+                        price: p ? p.price : 0
+                    };
+                }),
+                total: Number(discountedTotal.toFixed(2))
+            });
+        }
+       
+       
         }
 
         updateCart();
@@ -517,21 +542,9 @@ function resetCheckoutState() {
     if (checkoutBtn) {
         checkoutBtn.textContent = "إتمام الطلب";
         checkoutBtn.style.backgroundColor = "";
-        if (window.AlRayedDB) {
-    window.AlRayedDB.saveOrderToCloud({
-        customerName: name,
-        customerPhone: phone,
-        customerAddress: address,
-        paymentMethod: selectedPayment,
-        items: cart.map(item => {
-            const p = products.find(prod => prod.id === item.id);
-            return { name: p ? p.name : "منتج", qty: item.quantity, price: p ? p.price : 0 };
-        }),
-        total: totalAmount
-    });
-        }
     }
 }
+
 
 function openCart() {
     if (cartDrawer) cartDrawer.classList.add("open");
@@ -1180,3 +1193,11 @@ window.addEventListener("load", async () => {
 // ======================================
 // ======================================
 //
+products.push({
+    id: 99,
+    name: "بوكس التمور الملكية والعسل (عرض خاص)",
+    category: "dates",
+    categoryName: "عروض حصرية",
+    price: 119,
+    image: "assets/Gemini_Generated_Image_n1teven1teven1te.png"
+});
