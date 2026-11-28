@@ -19,7 +19,7 @@ if (document.readyState === "loading") {
 setTimeout(hidePageLoader, 2500);
 
 // ======================================
-// AL RAYED STORE - PRODUCTS DATA
+// 2. AL RAYED STORE - PRODUCTS DATA
 // ======================================
 const products = [
     // --- خضروات ---
@@ -214,11 +214,21 @@ const products = [
         categoryName: "سناكس ومشروبات",
         price: 9,
         image: "https://images.unsplash.com/photo-1546173159-315724a31696?w=600"
+    },
+
+    // --- العرض الخاص ---
+    {
+        id: 99,
+        name: "بوكس التمور الملكية والعسل (عرض خاص)",
+        category: "dates",
+        categoryName: "عروض حصرية",
+        price: 119,
+        image: "assets/Gemini_Generated_Image_n1teven1teven1te.png"
     }
 ];
 
 // ======================================
-// ELEMENTS & CONFIG
+// 3. ELEMENTS & CONFIG
 // ======================================
 const STORE_WHATSAPP = "966597098044";
 const FREE_SHIPPING_GOAL = 100;
@@ -242,18 +252,19 @@ const toast = document.getElementById("toast");
 const checkoutBtn = document.getElementById("checkoutBtn");
 
 // ======================================
-// STATE
+// 4. STATE
 // ======================================
 let selectedCategory = "all";
 let searchTerm = "";
 let cart = [];
 let wishlist = JSON.parse(localStorage.getItem("alRayedWishlist") || "[]");
+let activeDiscountPercent = 0;
 
 try {
     const savedCart = JSON.parse(localStorage.getItem("alRayedCart") || "[]");
     if (Array.isArray(savedCart)) {
         cart = savedCart.filter(item =>
-            (products.some(p => p.id === item.id) || item.id === 99) &&
+            products.some(p => p.id === item.id) &&
             Number.isInteger(item.quantity) &&
             item.quantity > 0
         );
@@ -267,7 +278,7 @@ function formatPrice(price) {
 }
 
 // ======================================
-// NOTIFICATION (TOAST)
+// 5. NOTIFICATION (TOAST)
 // ======================================
 let toastTimer;
 function showToast(message) {
@@ -281,7 +292,7 @@ function showToast(message) {
 }
 
 // ======================================
-// SCROLL REVEAL OBSERVER
+// 6. SCROLL REVEAL OBSERVER
 // ======================================
 const revealObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -305,7 +316,7 @@ function applyScrollAnimations() {
 }
 
 // ======================================
-// DISPLAY PRODUCTS + BADGES + WISHLIST
+// 7. DISPLAY PRODUCTS + BADGES + WISHLIST
 // ======================================
 function displayProducts() {
     if (!productsGrid) return;
@@ -366,7 +377,7 @@ function displayProducts() {
 }
 
 // ======================================
-// CATEGORY & SEARCH
+// 8. CATEGORY & SEARCH
 // ======================================
 if (categories) {
     categories.addEventListener("click", (event) => {
@@ -394,7 +405,7 @@ if (searchInput) {
 }
 
 // ======================================
-// CART FUNCTIONS
+// 9. CART FUNCTIONS
 // ======================================
 function saveCart() {
     localStorage.setItem("alRayedCart", JSON.stringify(cart));
@@ -420,7 +431,7 @@ function addToCart(productId) {
 }
 
 function updateCart() {
-    let total = 0;
+    let rawTotal = 0;
     let totalQuantity = 0;
 
     if (cart.length === 0) {
@@ -438,7 +449,7 @@ function updateCart() {
             const product = products.find(p => p.id === item.id);
             if (!product) return "";
             const subtotal = product.price * item.quantity;
-            total += subtotal;
+            rawTotal += subtotal;
             totalQuantity += item.quantity;
 
             return `
@@ -459,19 +470,30 @@ function updateCart() {
         }).join("");
     }
 
-    if (cartTotal) cartTotal.textContent = formatPrice(total);
+    const finalTotal = (activeDiscountPercent > 0 && rawTotal > 0)
+        ? rawTotal * (1 - activeDiscountPercent / 100)
+        : rawTotal;
+
+    if (cartTotal) {
+        if (activeDiscountPercent > 0 && rawTotal > 0) {
+            cartTotal.innerHTML = `<span style="text-decoration:line-through;color:#9CA3AF;font-size:13px;margin-left:6px;">${rawTotal.toFixed(2)}</span> ${finalTotal.toFixed(2)} ر.س`;
+        } else {
+            cartTotal.textContent = formatPrice(rawTotal);
+        }
+    }
+
     if (cartCount) cartCount.textContent = totalQuantity;
 
     const shippingText = document.getElementById("shippingText");
     const shippingProgress = document.getElementById("shippingProgress");
     if (shippingText && shippingProgress) {
-        if (total >= FREE_SHIPPING_GOAL) {
+        if (finalTotal >= FREE_SHIPPING_GOAL) {
             shippingText.innerHTML = "مبروك! حصلت على <strong>توصيل مجاني 🎉🚚</strong>";
             shippingProgress.style.width = "100%";
             shippingProgress.style.backgroundColor = "#15803D";
         } else {
-            const remaining = (FREE_SHIPPING_GOAL - total).toFixed(2);
-            const percentage = Math.min((total / FREE_SHIPPING_GOAL) * 100, 100);
+            const remaining = (FREE_SHIPPING_GOAL - finalTotal).toFixed(2);
+            const percentage = Math.min((finalTotal / FREE_SHIPPING_GOAL) * 100, 100);
             shippingText.innerHTML = `أضف منتجات بقيمة <strong>${remaining} ر.س</strong> للحصول على توصيل مجاني 🚚`;
             shippingProgress.style.width = `${percentage}%`;
             shippingProgress.style.backgroundColor = "var(--primary-main)";
@@ -482,7 +504,7 @@ function updateCart() {
 }
 
 // ======================================
-// CART CONTROLS & DRAWER OPEN/CLOSE
+// 10. CART CONTROLS & DRAWER OPEN/CLOSE
 // ======================================
 if (cartItems) {
     cartItems.addEventListener("click", (event) => {
@@ -502,31 +524,6 @@ if (cartItems) {
         if (action === "remove") {
             cart = cart.filter(i => i.id !== id);
             showToast("تم حذف المنتج من السلة");
-       
-       const discountedTotal = activeDiscountPercent > 0
-            ? totalAmount * (1 - activeDiscountPercent / 100)
-            : totalAmount;
-
-        if (window.AlRayedDB && typeof window.AlRayedDB.saveOrderToCloud === "function") {
-            window.AlRayedDB.saveOrderToCloud({
-                customerName: name,
-                customerPhone: phone,
-                customerAddress: address,
-                paymentMethod: selectedPayment,
-                discountPercent: activeDiscountPercent,
-                items: cart.map(item => {
-                    const p = products.find(prod => prod.id === item.id);
-                    return {
-                        name: p ? p.name : "منتج",
-                        qty: item.quantity,
-                        price: p ? p.price : 0
-                    };
-                }),
-                total: Number(discountedTotal.toFixed(2))
-            });
-        }
-       
-       
         }
 
         updateCart();
@@ -544,7 +541,6 @@ function resetCheckoutState() {
         checkoutBtn.style.backgroundColor = "";
     }
 }
-
 
 function openCart() {
     if (cartDrawer) cartDrawer.classList.add("open");
@@ -570,7 +566,7 @@ if (continueShopping) continueShopping.addEventListener("click", closeCartDrawer
 if (cartOverlay) cartOverlay.addEventListener("click", closeCartDrawer);
 
 // ======================================
-// LIVE ORDER TRACKING (5 MINUTES TIMER)
+// 11. LIVE ORDER TRACKING (5 MINUTES TIMER)
 // ======================================
 const orderTrackerCard = document.getElementById("orderTrackerCard");
 const trackerBadge = document.getElementById("trackerBadge");
@@ -643,7 +639,7 @@ if (closeTracker) {
 renderOrderTracker();
 
 // ======================================
-// PAYMENT METHODS & WHATSAPP CHECKOUT
+// 12. PAYMENT METHODS & WHATSAPP CHECKOUT
 // ======================================
 const customerName = document.getElementById("customerName");
 const customerPhone = document.getElementById("customerPhone");
@@ -679,7 +675,7 @@ document.querySelectorAll(".pay-option").forEach(option => {
 });
 
 if (checkoutBtn) {
-    checkoutBtn.addEventListener("click", (e) => {
+    checkoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
 
         if (cart.length === 0) {
@@ -717,20 +713,46 @@ if (checkoutBtn) {
         orderDetails += `━━━━━━━━━━━━━━\n`;
         orderDetails += `*المنتجات المطلوبة:*\n`;
 
-        let totalAmount = 0;
+        let rawTotal = 0;
+        const orderItemsList = [];
+
         cart.forEach((item, idx) => {
             const p = products.find(prod => prod.id === item.id);
             if (p) {
                 const sub = p.price * item.quantity;
-                totalAmount += sub;
+                rawTotal += sub;
                 orderDetails += `${idx + 1}. ${p.name} (×${item.quantity}) = ${sub.toFixed(2)} ر.س\n`;
+                orderItemsList.push({
+                    name: p.name,
+                    qty: item.quantity,
+                    price: p.price
+                });
             }
         });
 
-        const shippingStatus = totalAmount >= FREE_SHIPPING_GOAL ? "مجاني 🎉" : "يُحدد حسب المنطقة";
+        const finalTotal = activeDiscountPercent > 0
+            ? rawTotal * (1 - activeDiscountPercent / 100)
+            : rawTotal;
+
+        const shippingStatus = finalTotal >= FREE_SHIPPING_GOAL ? "مجاني 🎉" : "يُحدد حسب المنطقة";
         orderDetails += `━━━━━━━━━━━━━━\n`;
+        if (activeDiscountPercent > 0) {
+            orderDetails += `🏷️ *الخصم:* ${activeDiscountPercent}%\n`;
+        }
         orderDetails += `🚚 *التوصيل:* ${shippingStatus}\n`;
-        orderDetails += `💰 *الإجمالي:* ${totalAmount.toFixed(2)} ر.س`;
+        orderDetails += `💰 *الإجمالي:* ${finalTotal.toFixed(2)} ر.س`;
+
+        if (window.AlRayedDB && typeof window.AlRayedDB.saveOrderToCloud === "function") {
+            await window.AlRayedDB.saveOrderToCloud({
+                customerName: name,
+                customerPhone: phone,
+                customerAddress: address,
+                paymentMethod: selectedPayment,
+                discountPercent: activeDiscountPercent,
+                items: orderItemsList,
+                total: Number(finalTotal.toFixed(2))
+            });
+        }
 
         startOrderTracking();
         closeCartDrawer();
@@ -746,7 +768,7 @@ if (checkoutBtn) {
 }
 
 // ======================================
-// PRODUCT GRID CLICKS (CART, WISHLIST, QUICK VIEW)
+// 13. PRODUCT GRID CLICKS (CART, WISHLIST, QUICK VIEW)
 // ======================================
 const qvOverlay = document.getElementById("qvOverlay");
 const closeQv = document.getElementById("closeQv");
@@ -851,7 +873,7 @@ if (qvOverlay) {
 }
 
 // ======================================
-// AUTH MODAL (LOGIN / REGISTER)
+// 14. AUTH MODAL (LOGIN / REGISTER)
 // ======================================
 const loginBtn = document.querySelector(".login-btn");
 const authOverlay = document.getElementById("authOverlay");
@@ -916,24 +938,22 @@ document.addEventListener("keydown", (e) => {
         closeCartDrawer();
         closeQuickViewModal();
         closeAuthModal();
+        closePolicyModal();
     }
 });
 
 // ======================================
-// DEALS, DARK MODE & AMBIENT UI
+// 15. DEALS, DARK MODE & AMBIENT UI
 // ======================================
 let totalSeconds = (14 * 3600) + (45 * 60) + 30;
 const hoursEl = document.getElementById("hoursVal");
 const minsEl = document.getElementById("minsVal");
 const secsEl = document.getElementById("secsVal");
 
-const isDark = document.body.classList.contains("dark-mode");
 const metaTheme = document.getElementById("themeColorMeta");
 if (metaTheme) {
-    metaTheme.setAttribute("content", isDark ? "#0B1913" : "#1B4332");
+    metaTheme.setAttribute("content", document.body.classList.contains("dark-mode") ? "#0B1913" : "#1B4332");
 }
-
-
 
 if (hoursEl && minsEl && secsEl) {
     setInterval(() => {
@@ -944,15 +964,6 @@ if (hoursEl && minsEl && secsEl) {
         secsEl.textContent = String(totalSeconds % 60).padStart(2, "0");
     }, 1000);
 }
-
-products.push({
-    id: 99,
-    name: "بوكس التمور الملكية والعسل (عرض خاص)",
-    category: "dates",
-    categoryName: "عروض حصرية",
-    price: 119,
-    image: "./assets/royal-box.jpg"
-});
 
 const orderDealBtn = document.getElementById("orderDealBtn");
 if (orderDealBtn) {
@@ -1017,8 +1028,12 @@ if (headerActions) {
 
     themeBtn.addEventListener("click", () => {
         document.body.classList.toggle("dark-mode");
+        document.documentElement.classList.toggle("dark-mode");
         const isDark = document.body.classList.contains("dark-mode");
         themeBtn.innerHTML = isDark ? "☀️" : "🌙";
+        if (metaTheme) {
+            metaTheme.setAttribute("content", isDark ? "#0B1913" : "#1B4332");
+        }
         showToast(isDark ? "تم تفعيل الوضع الليلي الفخم 🌙" : "تم تفعيل الوضع النهاري ☀️");
     });
 }
@@ -1032,15 +1047,8 @@ floatingWa.innerHTML = `<span class="wa-online-dot"></span> خدمة العمل�
 document.body.appendChild(floatingWa);
 
 // ======================================
-// INITIALIZE
+// 16. LEGAL POLICIES MODAL & PROMO CODE
 // ======================================
-displayProducts();
-updateCart();
-// ======================================
-// 22. LEGAL POLICIES MODAL & PROMO CODE
-// ======================================
-
-// 1. محتوى السياسات القانونية (متوافق مع نظام التجارة الإلكترونية السعودي)
 const policiesContent = {
     privacy: {
         title: "سياسة الخصوصية وحماية البيانات 🔒",
@@ -1113,8 +1121,6 @@ if (policyOverlay) {
     });
 }
 
-// 2. نظام كود الخصم (Promo Code: RAYED10)
-let activeDiscountPercent = 0;
 const promoInput = document.getElementById("promoInput");
 const applyPromoBtn = document.getElementById("applyPromoBtn");
 const promoMsg = document.getElementById("promoMsg");
@@ -1135,69 +1141,47 @@ if (applyPromoBtn && promoInput) {
             promoMsg.className = "promo-msg success";
             promoMsg.textContent = `🎉 تم تفعيل خصم ${activeDiscountPercent}% بنجاح!`;
             showToast(`تم تطبيق كود الخصم (${activeDiscountPercent}%) ✓`);
-            updateCartWithDiscount();
+            updateCart();
         } else {
             activeDiscountPercent = 0;
             promoMsg.style.display = "block";
             promoMsg.className = "promo-msg error";
             promoMsg.textContent = "❌ كود الخصم غير صحيح أو منتهي الصلاحية";
-            updateCartWithDiscount();
+            updateCart();
         }
     });
 }
 
-function updateCartWithDiscount() {
-    const rawTotal = cart.reduce((sum, item) => {
-        const p = products.find(prod => prod.id === item.id);
-        return sum + (p ? p.price * item.quantity : 0);
-    }, 0);
-
-    if (cartTotal) {
-        if (activeDiscountPercent > 0 && rawTotal > 0) {
-            const finalTotal = rawTotal * (1 - activeDiscountPercent / 100);
-            cartTotal.innerHTML = `<span style="text-decoration:line-through;color:#9CA3AF;font-size:13px;margin-left:6px;">${rawTotal.toFixed(2)}</span> ${finalTotal.toFixed(2)} ر.س`;
-        } else {
-            cartTotal.textContent = formatPrice(rawTotal);
-        }
+// ======================================
+// 17. CLOUD PRODUCTS SYNC (FIREBASE)
+// ======================================
+async function syncCloudProducts() {
+    if (!window.AlRayedDB || typeof window.AlRayedDB.loadCloudProducts !== "function") return;
+    const extraProducts = await window.AlRayedDB.loadCloudProducts();
+    if (extraProducts.length > 0) {
+        extraProducts.forEach(item => {
+            if (!products.some(p => p.name === item.name)) {
+                products.unshift({
+                    id: Number(item.id) || Date.now(),
+                    name: item.name,
+                    category: item.category || "dates",
+                    categoryName: item.categoryName || "منتجات مميزة",
+                    price: Number(item.price),
+                    image: item.image
+                });
+            }
+        });
+        displayProducts();
     }
 }
 
-const baseUpdateCart = updateCart;
-updateCart = function() {
-    baseUpdateCart();
-    updateCartWithDiscount();
-};
-// تحميل المنتجات المضافة من لوحة التحكم (Firebase)
-window.addEventListener("load", async () => {
-    setTimeout(async () => {
-        if (window.AlRayedDB) {
-            const extraProducts = await window.AlRayedDB.loadCloudProducts();
-            if (extraProducts.length > 0) {
-                extraProducts.forEach(item => {
-                    if (!products.some(p => p.name === item.name)) {
-                        products.unshift({
-                            id: Number(item.id) || Date.now(),
-                            name: item.name,
-                            category: item.category || "dates",
-                            categoryName: item.categoryName || "منتجات مميزة",
-                            price: Number(item.price),
-                            image: item.image
-                        });
-                    }
-                });
-                displayProducts();
-            }
-        }
-    }, 800);
+window.addEventListener("alrayed-db-ready", syncCloudProducts);
+window.addEventListener("load", () => {
+    setTimeout(syncCloudProducts, 800);
 });
+
 // ======================================
+// 18. INITIALIZE
 // ======================================
-//
-products.push({
-    id: 99,
-    name: "بوكس التمور الملكية والعسل (عرض خاص)",
-    category: "dates",
-    categoryName: "عروض حصرية",
-    price: 119,
-    image: "assets/Gemini_Generated_Image_n1teven1teven1te.png"
-});
+displayProducts();
+updateCart();
