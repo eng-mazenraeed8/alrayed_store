@@ -16,9 +16,8 @@ import {
     getAuth,
     signInWithEmailAndPassword,
     signOut,
-    onAuthStateChanged as firebaseOnAuthStateChanged
+    onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
 
 const firebaseConfig = {
     apiKey: "AIzaSyBYYrMNXCR-pZRgp_RqoAahqqpsugRRZbA",
@@ -34,7 +33,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// إتاحة دوال قاعدة البيانات للمتجر ولوحة التحكم
 window.AlRayedDB = {
     // 1. حفظ طلب جديد في قاعدة البيانات
     async saveOrderToCloud(orderData) {
@@ -42,7 +40,8 @@ window.AlRayedDB = {
             const docRef = await addDoc(collection(db, "orders"), {
                 ...orderData,
                 status: "جاري التجهيز 📦",
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                createdAtClient: Date.now()
             });
             return docRef.id;
         } catch (err) {
@@ -66,36 +65,18 @@ window.AlRayedDB = {
         }
     },
 
-    // الاشتراك اللحظي في مجموعة المنتجات (يعيد دالة لإلغاء الاشتراك)
-    subscribeToProducts(callback) {
-        return onSnapshot(
-            collection(db, "products"),
-            (snapshot) => {
-                const items = [];
-                snapshot.forEach(d => items.push({ firebaseId: d.id, ...d.data() }));
-                callback(items);
-            },
-            (err) => console.error("Firebase Products Snapshot Error:", err)
-        );
-    },
-
-    // تسجيل دخول/خروج المسؤول عبر Firebase Authentication
-    loginAdmin(email, password) {
-        return signInWithEmailAndPassword(auth, email, password);
-    },
-    logoutAdmin() {
-        return signOut(auth);
-    },
-    onAuthStateChanged(callback) {
-        return firebaseOnAuthStateChanged(auth, callback);
-    },
-    get currentUser() {
-        return auth.currentUser;
-    },
-
-    // 3. دوال لوحة التحكم (Admin)
-    db,
+    // 3. دوال تسجيل الدخول والخروج للأدمن
     auth,
+    async loginAdmin(email, password) {
+        return await signInWithEmailAndPassword(auth, email, password);
+    },
+    async logoutAdmin() {
+        return await signOut(auth);
+    },
+    onAuthStateChanged,
+
+    // 4. دوال لوحة التحكم (Admin)
+    db,
     collection,
     addDoc,
     getDocs,
@@ -108,5 +89,8 @@ window.AlRayedDB = {
     onSnapshot
 };
 
-// script.js is a classic script that runs before this module, so it waits for this event.
-window.dispatchEvent(new Event("alrayed-db-ready"));
+<ElicitationsGroup message="لو حابب نكمل ضبط الجزء السحابي في المتجر:">
+  <Elicitation label="تحديث لحظي للمنتجات" query="عايز المنتجات المضافة من لوحة التحكم تظهر وتتحذف في المتجر لحظيًا بدون ريفريش."/>
+  <Elicitation label="تأمين دخول الأدمن" query="عايز أربط دخول لوحة التحكم بـ Firebase Auth بدل كلمة المرور الثابتة."/>
+  <Elicitation label="مراجعة قواعد Firestore" query="هل قواعد Firestore الحالية كافية لحفظ الطلبات والمنتجات بأمان؟"/>
+</ElicitationsGroup>
